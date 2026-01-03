@@ -1,3 +1,31 @@
+// --- ROUTING LOGIC ---
+const viewHome = document.getElementById('view-home');
+const viewTool = document.getElementById('view-tool');
+
+const handleRoute = () => {
+    const hash = window.location.hash;
+    
+    // Simple Router
+    if (hash === '#/base64') {
+        viewHome.classList.add('hidden');
+        viewTool.classList.remove('hidden');
+        // Small fade in effect handled by CSS implicitly if we wanted, 
+        // but immediate toggle is snappier for tools.
+    } else {
+        // Default to Home
+        viewTool.classList.add('hidden');
+        viewHome.classList.remove('hidden');
+    }
+};
+
+// Listen for hash changes
+window.addEventListener('hashchange', handleRoute);
+// Check initial load
+window.addEventListener('load', handleRoute);
+
+
+// --- APP LOGIC (Existing) ---
+
 // Constants
 const STATES = {
     IDLE: 'idle',
