@@ -1,19 +1,23 @@
 // --- ROUTING LOGIC ---
 const viewHome = document.getElementById('view-home');
 const viewTool = document.getElementById('view-tool');
+const viewAimo = document.getElementById('view-aimo');
 
 const handleRoute = () => {
     const hash = window.location.hash;
     
+    // Reset all views
+    viewHome.classList.add('hidden');
+    viewTool.classList.add('hidden');
+    viewAimo.classList.add('hidden');
+
     // Simple Router
     if (hash === '#/base64') {
-        viewHome.classList.add('hidden');
         viewTool.classList.remove('hidden');
-        // Small fade in effect handled by CSS implicitly if we wanted, 
-        // but immediate toggle is snappier for tools.
+    } else if (hash === '#/aimo') {
+        viewAimo.classList.remove('hidden');
     } else {
         // Default to Home
-        viewTool.classList.add('hidden');
         viewHome.classList.remove('hidden');
     }
 };

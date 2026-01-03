@@ -21,6 +21,10 @@
                 700: '#0369a1',
                 800: '#075985',
                 900: '#0c4a6e',
+              },
+              kaggle: {
+                500: '#20BEFF',
+                600: '#008ABC'
               }
             },
             animation: {
@@ -94,6 +98,29 @@
                     <div class="px-8 py-4 bg-slate-50 border-t border-slate-100 w-full flex justify-between items-center group-hover:bg-brand-50/30 transition-colors">
                         <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Utility</span>
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-slate-400 group-hover:text-brand-500 group-hover:translate-x-1 transition-all">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                        </svg>
+                    </div>
+                </a>
+
+                <!-- Card 2: AIMO3 Dashboard -->
+                <a href="#/aimo" class="group relative bg-white rounded-2xl shadow-sm border border-slate-200 hover:shadow-xl hover:border-kaggle-500 transition-all duration-300 overflow-hidden flex flex-col h-64">
+                    <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-kaggle-500 to-blue-600 transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-300"></div>
+                    
+                    <div class="p-8 flex-grow flex flex-col items-start">
+                        <div class="w-12 h-12 bg-sky-50 text-kaggle-500 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-sky-100 transition-all">
+                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z" />
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-bold text-slate-800 mb-2 group-hover:text-kaggle-600 transition-colors">AIMO3 Dashboard</h3>
+                        <p class="text-slate-500 text-sm leading-relaxed">
+                             Analytics, baselines, and resources for the AI Mathematical Olympiad Progress Prize 3.
+                        </p>
+                    </div>
+                    <div class="px-8 py-4 bg-slate-50 border-t border-slate-100 w-full flex justify-between items-center group-hover:bg-sky-50/30 transition-colors">
+                        <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Monitor</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-slate-400 group-hover:text-kaggle-500 group-hover:translate-x-1 transition-all">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
                         </svg>
                     </div>
@@ -233,6 +260,191 @@
                     <p class="text-xs text-slate-500">Preview file list and download as [timestamp].zip.</p>
                 </div>
             </div>
+        </div>
+
+        <!-- VIEW: AIMO DASHBOARD -->
+        <div id="view-aimo" class="hidden w-full max-w-7xl mx-auto">
+            
+            <!-- Breadcrumb -->
+            <div class="mb-6 flex items-center justify-between">
+                <a href="#" class="text-sm font-medium text-slate-500 hover:text-brand-600 transition-colors flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 mr-1">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+                    </svg>
+                    Back to Toolkits
+                </a>
+                <span class="inline-flex items-center px-3 py-1 rounded-full bg-green-100 text-green-800 text-xs font-bold">
+                    <span class="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span>
+                    Competition Active
+                </span>
+            </div>
+
+            <!-- Header -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 mb-8">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                    <div>
+                        <h2 class="text-3xl font-extrabold text-slate-900 mb-2">AIMO Progress Prize 3</h2>
+                        <p class="text-slate-600 max-w-2xl">
+                            Create algorithms that solve difficult math problems using AI. This competition pushes the boundaries of mathematical reasoning.
+                        </p>
+                    </div>
+                    <a href="https://www.kaggle.com/competitions/ai-mathematical-olympiad-progress-prize-3" target="_blank" class="flex-shrink-0 bg-kaggle-500 hover:bg-kaggle-600 text-white font-bold py-3 px-6 rounded-lg transition-colors shadow-lg shadow-kaggle-500/20 flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24"><path d="M18.825 23.859c-.022.092-.117.141-.281.141h-3.139c-.187 0-.351-.082-.492-.248l-5.178-6.589-1.448 1.374v5.111c0 .211-.117.316-.351.316H4.796c-.234 0-.351-.105-.351-.316V.317c0-.211.117-.316.351-.316h3.139c.234 0 .351.105.351.316v15.112l6.396-6.448c.141-.141.328-.211.562-.211h3.35c.187 0 .292.093.316.28.023.14-.047.281-.211.422l-6.115 5.511 6.818 8.44c.14.187.187.328.14.422z"/></svg>
+                        View on Kaggle
+                    </a>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                
+                <!-- Left Column: Links & Baselines -->
+                <div class="lg:col-span-2 space-y-8">
+                    
+                    <!-- Essential Links -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <a href="https://www.kaggle.com/competitions/ai-mathematical-olympiad-progress-prize-3/data" target="_blank" class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:border-kaggle-500 hover:shadow-md transition-all group">
+                            <div class="text-slate-400 group-hover:text-kaggle-500 mb-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" />
+                                </svg>
+                            </div>
+                            <h3 class="font-bold text-slate-800">Dataset</h3>
+                            <p class="text-xs text-slate-500 mt-1">Access competition files</p>
+                        </a>
+                        <a href="https://www.kaggle.com/competitions/ai-mathematical-olympiad-progress-prize-3/discussion" target="_blank" class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:border-kaggle-500 hover:shadow-md transition-all group">
+                            <div class="text-slate-400 group-hover:text-kaggle-500 mb-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 0 1-.825-.242m9.345-8.334a2.126 2.126 0 0 0-.476-.095 48.64 48.64 0 0 0-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0 0 11.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155" />
+                                </svg>
+                            </div>
+                            <h3 class="font-bold text-slate-800">Discussion</h3>
+                            <p class="text-xs text-slate-500 mt-1">Forums & Strategy</p>
+                        </a>
+                        <a href="https://www.kaggle.com/competitions/ai-mathematical-olympiad-progress-prize-3/rules" target="_blank" class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:border-kaggle-500 hover:shadow-md transition-all group">
+                             <div class="text-slate-400 group-hover:text-kaggle-500 mb-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 7.5h1.5m-1.5 3h1.5m-7.5 3h7.5m-7.5 3h7.5m3-9h3.375c.621 0 1.125.504 1.125 1.125V18a2.25 2.25 0 0 1-2.25 2.25M16.5 7.5V18a2.25 2.25 0 0 0 2.25 2.25M16.5 7.5V4.875c0-.621-.504-1.125-1.125-1.125H4.125C3.504 3.75 3 4.254 3 4.875V18a2.25 2.25 0 0 0 2.25 2.25h13.5M6 7.5h3v3H6v-3Z" />
+                                </svg>
+                            </div>
+                            <h3 class="font-bold text-slate-800">Rules</h3>
+                            <p class="text-xs text-slate-500 mt-1">Evaluation & Prizes</p>
+                        </a>
+                    </div>
+
+                    <!-- Baselines Section -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                         <div class="px-6 py-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                            <h3 class="font-bold text-slate-800">Baseline Approaches</h3>
+                            <span class="text-xs text-slate-500 bg-white border border-slate-200 px-2 py-1 rounded">Mock Data</span>
+                        </div>
+                        <div class="p-6">
+                            <div class="space-y-4">
+                                <div class="flex items-start p-4 border border-slate-100 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer">
+                                    <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0 mr-4 font-bold text-sm">
+                                        DS
+                                    </div>
+                                    <div class="flex-grow">
+                                        <div class="flex justify-between items-start">
+                                            <h4 class="font-bold text-slate-800">DeepSeek-Math Fine-tune</h4>
+                                            <span class="text-xs font-mono bg-slate-100 text-slate-600 px-2 py-1 rounded">LB: 20.4</span>
+                                        </div>
+                                        <p class="text-sm text-slate-500 mt-1">Using DeepSeek-Math-7B-RL with chain-of-thought prompting.</p>
+                                        <div class="mt-3 flex gap-2">
+                                            <span class="text-[10px] uppercase font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded">Notebook</span>
+                                            <span class="text-[10px] uppercase font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded">Python</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-start p-4 border border-slate-100 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer">
+                                    <div class="w-10 h-10 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center flex-shrink-0 mr-4 font-bold text-sm">
+                                        NM
+                                    </div>
+                                    <div class="flex-grow">
+                                        <div class="flex justify-between items-start">
+                                            <h4 class="font-bold text-slate-800">NuminaMath CoT</h4>
+                                            <span class="text-xs font-mono bg-slate-100 text-slate-600 px-2 py-1 rounded">LB: 18.2</span>
+                                        </div>
+                                        <p class="text-sm text-slate-500 mt-1">Implementation of NuminaMath 7B TIR with specialized prompts.</p>
+                                        <div class="mt-3 flex gap-2">
+                                            <span class="text-[10px] uppercase font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded">Notebook</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <a href="https://www.kaggle.com/competitions/ai-mathematical-olympiad-progress-prize-3/code" target="_blank" class="block text-center text-sm font-medium text-kaggle-600 hover:text-kaggle-500 py-2">
+                                    Explore all Code on Kaggle &rarr;
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Right Column: Leaderboard Widget -->
+                <div class="lg:col-span-1">
+                    <div class="bg-slate-900 rounded-2xl shadow-xl overflow-hidden text-white relative">
+                        <div class="p-6 border-b border-slate-800 bg-slate-800/50">
+                            <h3 class="font-bold text-lg flex items-center">
+                                <span class="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></span>
+                                Live Leaderboard
+                            </h3>
+                            <p class="text-slate-400 text-xs mt-1">Top teams ranked by accuracy.</p>
+                        </div>
+                        
+                        <div class="p-6 space-y-4">
+                            <!-- Fake top 3 rows for visuals -->
+                            <div class="flex items-center space-x-3 bg-slate-800/50 p-3 rounded-lg border border-slate-700">
+                                <div class="w-6 text-center font-bold text-yellow-400">1</div>
+                                <div class="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-xs font-bold">A</div>
+                                <div class="flex-grow">
+                                    <div class="text-sm font-medium">AlphaMath</div>
+                                    <div class="text-xs text-slate-400">3 entries</div>
+                                </div>
+                                <div class="font-mono font-bold text-green-400">29.15</div>
+                            </div>
+
+                            <div class="flex items-center space-x-3 bg-slate-800/50 p-3 rounded-lg border border-slate-700">
+                                <div class="w-6 text-center font-bold text-slate-300">2</div>
+                                <div class="w-8 h-8 rounded-full bg-pink-500 flex items-center justify-center text-xs font-bold">Q</div>
+                                <div class="flex-grow">
+                                    <div class="text-sm font-medium">Qwen-Solver</div>
+                                    <div class="text-xs text-slate-400">12 entries</div>
+                                </div>
+                                <div class="font-mono font-bold text-green-400">28.92</div>
+                            </div>
+
+                            <div class="flex items-center space-x-3 bg-slate-800/50 p-3 rounded-lg border border-slate-700">
+                                <div class="w-6 text-center font-bold text-orange-400">3</div>
+                                <div class="w-8 h-8 rounded-full bg-teal-500 flex items-center justify-center text-xs font-bold">G</div>
+                                <div class="flex-grow">
+                                    <div class="text-sm font-medium">GrandMasterX</div>
+                                    <div class="text-xs text-slate-400">5 entries</div>
+                                </div>
+                                <div class="font-mono font-bold text-green-400">28.80</div>
+                            </div>
+
+                            <div class="text-center pt-4">
+                                <p class="text-xs text-slate-500 mb-4">*Data is simulated for display</p>
+                                <a href="https://www.kaggle.com/competitions/ai-mathematical-olympiad-progress-prize-3/leaderboard" target="_blank" class="block w-full bg-kaggle-500 hover:bg-kaggle-600 text-white font-bold py-2 rounded-lg transition-colors text-sm">
+                                    See Real-Time Rankings
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Note -->
+                    <div class="mt-6 bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+                        <h4 class="text-yellow-800 font-bold text-sm mb-1">Competition Tip</h4>
+                        <p class="text-yellow-700 text-xs">
+                            This competition requires high reasoning capabilities. Models like DeepSeek-Math and specialized fine-tunes on math datasets (like MATH, GSM8K) are performing well.
+                        </p>
+                    </div>
+
+                </div>
+
+            </div>
+
         </div>
 
     </main>
