@@ -1,0 +1,5 @@
+{
+  "name": "Pages Reverse Base64 Txt to Zip",
+  "description": "A specialized utility to convert text files containing split Base64 strings. It reads lines in reverse order, concatenates them, decodes the Base64 content, and generates a ZIP file named with the current timestamp.",
+  "requestFramePermissions": []
+}

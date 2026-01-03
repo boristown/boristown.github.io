@@ -1,0 +1,1 @@
+// This file is deprecated. The application has been converted to a static site (index.html + script.js).
