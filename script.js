@@ -1,10 +1,105 @@
+// --- AIMO DASHBOARD DATA & LOGIC ---
+
+const AIMO_BASELINES = [
+    {
+        title: "DeepSeek-Math 7B RL",
+        score: "20.4",
+        desc: "Chain-of-thought prompting with DeepSeek-Math-7B-RL model.",
+        tags: ["Notebook", "Python"],
+        color: "bg-blue-100 text-blue-600",
+        initial: "DS",
+        url: "https://www.kaggle.com/competitions/ai-mathematical-olympiad-progress-prize-3/code"
+    },
+    {
+        title: "NuminaMath 7B TIR",
+        score: "18.2",
+        desc: "Tool-integrated reasoning approach using NuminaMath.",
+        tags: ["Notebook", "TIR"],
+        color: "bg-purple-100 text-purple-600",
+        initial: "NM",
+        url: "https://www.kaggle.com/competitions/ai-mathematical-olympiad-progress-prize-3/code"
+    },
+     {
+        title: "Qwen2.5-Math-7B-Instruct",
+        score: "16.8",
+        desc: "Standard CoT baseline with the new Qwen2.5 Math model.",
+        tags: ["Starter"],
+        color: "bg-emerald-100 text-emerald-600",
+        initial: "QW",
+        url: "https://www.kaggle.com/competitions/ai-mathematical-olympiad-progress-prize-3/code"
+    }
+];
+
+const AIMO_LEADERBOARD = [
+    { rank: 1, name: "AlphaMath Team", entries: 5, score: "29.15" },
+    { rank: 2, name: "Qwen-Solver", entries: 12, score: "28.92" },
+    { rank: 3, name: "GrandMasterX", entries: 5, score: "28.80" },
+    { rank: 4, name: "DeepSeek-Pro", entries: 8, score: "28.45" },
+    { rank: 5, name: "Math-Wizard-9000", entries: 22, score: "27.90" }
+];
+
+const renderAimoDashboard = () => {
+    const baselinesContainer = document.getElementById('aimo-baselines-list');
+    const leaderboardContainer = document.getElementById('aimo-leaderboard-list');
+
+    // Render Baselines
+    if (baselinesContainer && baselinesContainer.children.length === 0) {
+        baselinesContainer.innerHTML = AIMO_BASELINES.map(item => `
+            <a href="${item.url}" target="_blank" rel="noopener noreferrer" class="flex items-start p-4 border border-slate-100 rounded-lg hover:bg-slate-50 hover:border-slate-200 transition-all cursor-pointer group block">
+                <div class="w-10 h-10 rounded-full ${item.color} flex items-center justify-center flex-shrink-0 mr-4 font-bold text-sm">
+                    ${item.initial}
+                </div>
+                <div class="flex-grow">
+                    <div class="flex justify-between items-start">
+                        <h4 class="font-bold text-slate-800 group-hover:text-kaggle-600 transition-colors">${item.title}</h4>
+                        <span class="text-xs font-mono bg-slate-100 text-slate-600 px-2 py-1 rounded">LB: ${item.score}</span>
+                    </div>
+                    <p class="text-sm text-slate-500 mt-1">${item.desc}</p>
+                    <div class="mt-3 flex gap-2">
+                        ${item.tags.map(tag => `<span class="text-[10px] uppercase font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded">${tag}</span>`).join('')}
+                    </div>
+                </div>
+            </a>
+        `).join('');
+    }
+
+    // Render Leaderboard
+    if (leaderboardContainer && leaderboardContainer.children.length === 0) {
+        leaderboardContainer.innerHTML = AIMO_LEADERBOARD.map(item => {
+            let rankColor = "text-slate-400";
+            if (item.rank === 1) rankColor = "text-yellow-400";
+            if (item.rank === 2) rankColor = "text-slate-300";
+            if (item.rank === 3) rankColor = "text-orange-400";
+            
+            // Random avatar color generator based on name length
+            const colors = ["bg-indigo-500", "bg-pink-500", "bg-teal-500", "bg-blue-500", "bg-red-500"];
+            const avatarColor = colors[item.name.length % colors.length];
+
+            return `
+            <div class="flex items-center space-x-3 bg-slate-800/50 p-3 rounded-lg border border-slate-700 hover:border-slate-600 transition-colors">
+                <div class="w-6 text-center font-bold ${rankColor}">${item.rank}</div>
+                <div class="w-8 h-8 rounded-full ${avatarColor} flex items-center justify-center text-xs font-bold text-white shadow-sm">
+                    ${item.name.charAt(0)}
+                </div>
+                <div class="flex-grow">
+                    <div class="text-sm font-medium text-white">${item.name}</div>
+                    <div class="text-xs text-slate-400">${item.entries} entries</div>
+                </div>
+                <div class="font-mono font-bold text-green-400">${item.score}</div>
+            </div>
+            `;
+        }).join('');
+    }
+};
+
 // --- ROUTING LOGIC ---
 const viewHome = document.getElementById('view-home');
 const viewTool = document.getElementById('view-tool');
 const viewAimo = document.getElementById('view-aimo');
 
 const handleRoute = () => {
-    const hash = window.location.hash;
+    // Normalize hash: #/aimo -> #aimo, #aimo -> #aimo
+    const hash = window.location.hash.replace('#/', '#');
     
     // Reset all views
     viewHome.classList.add('hidden');
@@ -12,10 +107,11 @@ const handleRoute = () => {
     viewAimo.classList.add('hidden');
 
     // Simple Router
-    if (hash === '#/base64') {
+    if (hash === '#base64') {
         viewTool.classList.remove('hidden');
-    } else if (hash === '#/aimo') {
+    } else if (hash === '#aimo') {
         viewAimo.classList.remove('hidden');
+        renderAimoDashboard();
     } else {
         // Default to Home
         viewHome.classList.remove('hidden');
