@@ -154,11 +154,47 @@ const renderAimoDashboard = () => {
 
 // --- DARKAGI LOGIC ---
 
+// Provided key by user
+const DARKAGI_API_KEY = "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";
+
+// Hardcoded fallback models in case API fails
+const FALLBACK_MODELS = [
+    { id: "google/gemini-2.0-flash-exp:free", name: "Gemini 2.0 Flash (Free)" },
+    { id: "google/gemini-2.0-flash-thinking-exp:free", name: "Gemini 2.0 Thinking (Free)" },
+    { id: "meta-llama/llama-3.2-11b-vision-instruct:free", name: "Llama 3.2 11B (Free)" },
+    { id: "microsoft/phi-3-mini-128k-instruct:free", name: "Phi-3 Mini (Free)" }
+];
+
 let darkAgiState = {
     initialized: false,
     history: [],
     models: [],
     loading: false
+};
+
+const populateModelSelect = (models) => {
+    const select = document.getElementById('darkagi-model-select');
+    if (!select) return;
+    
+    select.innerHTML = '';
+    
+    // Sort logic
+    models.sort((a, b) => (a.name || a.id).localeCompare(b.name || b.id));
+
+    models.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.id;
+        opt.textContent = m.name || m.id;
+        select.appendChild(opt);
+    });
+    
+    // Default preference
+    const preferred = models.find(m => m.id.includes('gemini') && m.id.includes('flash'));
+    if (preferred) {
+        select.value = preferred.id;
+    } else if (models.length > 0) {
+        select.selectedIndex = 0;
+    }
 };
 
 const initDarkAGI = async () => {
@@ -171,50 +207,36 @@ const initDarkAGI = async () => {
         status.textContent = "Fetching models...";
         status.className = "text-yellow-500 animate-pulse";
         
+        // Attempt to fetch fresh models
         const response = await fetch('https://openrouter.ai/api/v1/models');
         if (!response.ok) throw new Error("Failed to fetch models");
         
         const data = await response.json();
         
-        // Strictly filter for models ending in ':free'
+        // Filter for free models
         let freeModels = data.data.filter(m => m.id.endsWith(':free'));
         
-        // Sort alphabetically
-        freeModels.sort((a, b) => a.id.localeCompare(b.id));
-        
-        // Populate select
-        select.innerHTML = '';
-        if (freeModels.length > 0) {
-            freeModels.forEach(m => {
-                const opt = document.createElement('option');
-                opt.value = m.id;
-                opt.textContent = m.name || m.id;
-                select.appendChild(opt);
-            });
-            
-            // Default preference: Gemini Free -> Other Gemini -> First available
-            const preferred = freeModels.find(m => m.id.includes('gemini') && m.id.includes('flash'));
-            if (preferred) {
-                select.value = preferred.id;
-            } else {
-                 select.selectedIndex = 0;
-            }
-        } else {
-            const opt = document.createElement('option');
-            opt.textContent = "No free models found";
-            select.appendChild(opt);
+        if (freeModels.length === 0) {
+            throw new Error("No free models found in API response");
         }
         
         darkAgiState.models = freeModels;
-        darkAgiState.initialized = true;
+        populateModelSelect(freeModels);
+        
         status.textContent = "Online";
         status.className = "text-green-500 font-bold";
 
     } catch (err) {
-        console.error("Failed to init DarkAGI", err);
-        status.textContent = "Network Error";
-        status.className = "text-red-500 font-bold";
-        select.innerHTML = '<option>Error loading models</option>';
+        console.warn("DarkAGI Model Fetch Failed, using fallback list.", err);
+        
+        // Use fallback
+        darkAgiState.models = FALLBACK_MODELS;
+        populateModelSelect(FALLBACK_MODELS);
+
+        status.textContent = "Offline (Fallback)";
+        status.className = "text-orange-500 font-bold";
+    } finally {
+        darkAgiState.initialized = true;
     }
 };
 
@@ -247,18 +269,11 @@ const handleDarkAGISend = async (e) => {
 
     const input = document.getElementById('darkagi-input');
     const select = document.getElementById('darkagi-model-select');
-    const keyInput = document.getElementById('darkagi-api-key');
     const btn = document.getElementById('darkagi-send-btn');
     const message = input.value.trim();
     const model = select.value;
-    const apiKey = keyInput ? keyInput.value.trim() : '';
 
     if (!message || !model) return;
-    
-    if (!apiKey) {
-        alert("Please enter a valid API Key.");
-        return;
-    }
 
     // UI Updates
     input.value = '';
@@ -289,7 +304,7 @@ const handleDarkAGISend = async (e) => {
         const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
             method: "POST",
             headers: {
-                "Authorization": `Bearer ${apiKey}`,
+                "Authorization": `Bearer ${DARKAGI_API_KEY}`,
                 "Content-Type": "application/json",
                 // Valid generic referer to bypass browser quirks
                 "HTTP-Referer": "https://github.com/boristown/DarkAGI", 
@@ -336,9 +351,9 @@ const handleDarkAGISend = async (e) => {
             <span class="font-mono text-xs text-red-300 mt-1 block bg-black/20 p-2 rounded">${err.message}</span>
             <span class="text-xs text-slate-500 mt-2 block">
                 Troubleshooting:<br>
-                1. <strong>Invalid API Key</strong>. The default key provided is invalid ("User not found").<br>
-                2. Please enter your own OpenRouter API key in the input field above.<br>
-                3. Ensure the model selected is available.
+                1. <strong>Invalid API Key</strong>. The system key might be revoked or incorrect.<br>
+                2. Check if the model selected is actually available (some free models have downtime).<br>
+                3. Check your internet connection.
             </span>
         `;
         
@@ -350,14 +365,6 @@ const handleDarkAGISend = async (e) => {
             </div>
         `;
         container.appendChild(div);
-        
-        // Highlight Key Input
-        if (keyInput) {
-            keyInput.classList.add('border-red-500', 'ring-1', 'ring-red-500');
-            setTimeout(() => {
-                keyInput.classList.remove('border-red-500', 'ring-1', 'ring-red-500');
-            }, 2000);
-        }
         
     } finally {
         darkAgiState.loading = false;
