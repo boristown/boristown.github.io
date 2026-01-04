@@ -140,8 +140,11 @@ const renderAimoDashboard = () => {
 
 // --- DARKAGI LOGIC ---
 
-// Provided key by user - VERIFIED
-const DARKAGI_API_KEY = "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";
+// Key Management Logic
+const STORAGE_KEY = "borristown_darkagi_key";
+const getStoredKey = () => localStorage.getItem(STORAGE_KEY);
+const setStoredKey = (key) => localStorage.setItem(STORAGE_KEY, key);
+const clearStoredKey = () => localStorage.removeItem(STORAGE_KEY);
 
 // Hardcoded fallback models
 const FALLBACK_MODELS = [
@@ -229,15 +232,36 @@ const resetDarkAGIChat = () => {
         display.classList.remove("text-cyan-400", "glitch-text");
         display.classList.add("text-slate-500");
     }
+    
+    // Check key again logic
+    if (!getStoredKey()) {
+        appendDarkAGIMessage('assistant', "IDENTITY VERIFICATION REQUIRED.\n\nPlease enter your OpenRouter API Key to initialize the system.\n(Keys are stored locally only).");
+    }
 };
 
 const initDarkAGI = async () => {
+    const status = document.getElementById('darkagi-status');
+    const key = getStoredKey();
+
+    // 1. Check for Key
+    if (!key) {
+        if (status) {
+             status.textContent = "AUTH REQUIRED";
+             status.className = "text-yellow-500 font-mono animate-pulse";
+        }
+        const display = document.getElementById('darkagi-model-display');
+        if(display) {
+            display.innerText = "LOCKED";
+            display.classList.add("text-red-500");
+        }
+        appendDarkAGIMessage('assistant', "SYSTEM ALERT: NO ACCESS TOKEN FOUND.\n\nPlease enter your OpenRouter API Key (sk-or-...) to initialize the neural grid.\n\n[Security: Keys are stored in localStorage]");
+        return;
+    }
+
     if (darkAgiState.initialized) return;
 
-    const status = document.getElementById('darkagi-status');
-
     try {
-        // 1. Validate Key State
+        // 2. Validate Key State
         if (status) {
             status.textContent = "VERIFYING KEY...";
             status.className = "text-yellow-500 font-mono animate-pulse";
@@ -246,7 +270,7 @@ const initDarkAGI = async () => {
         // Check key validity with OpenRouter auth endpoint
         const authResponse = await fetch('https://openrouter.ai/api/v1/auth/key', {
              headers: {
-                "Authorization": `Bearer ${DARKAGI_API_KEY}`
+                "Authorization": `Bearer ${key}`
             }
         });
 
@@ -254,7 +278,7 @@ const initDarkAGI = async () => {
             throw new Error("Invalid API Key");
         }
         
-        // 2. Fetch Models
+        // 3. Fetch Models
         if (status) {
             status.textContent = "FETCHING MODELS...";
         }
@@ -266,7 +290,8 @@ const initDarkAGI = async () => {
         let freeModels = data.data.filter(m => m.id.endsWith(':free'));
         
         if (freeModels.length === 0) {
-            throw new Error("No free models found in API response");
+            // If no free models returned (unlikely), fallback
+            freeModels = FALLBACK_MODELS;
         }
         
         darkAgiState.models = freeModels;
@@ -275,6 +300,7 @@ const initDarkAGI = async () => {
         const display = document.getElementById('darkagi-model-display');
         if(display) {
              display.innerText = `GRID ONLINE (${freeModels.length} NODES)`;
+             display.classList.remove("text-red-500", "text-slate-500");
              display.classList.add("text-emerald-500");
         }
         
@@ -282,6 +308,9 @@ const initDarkAGI = async () => {
             status.textContent = "SYSTEM ONLINE";
             status.className = "text-green-500 font-mono font-bold";
         }
+        
+        darkAgiState.initialized = true;
+        appendDarkAGIMessage('assistant', "CONNECTION ESTABLISHED. READY.");
 
     } catch (err) {
         console.warn("DarkAGI Init Failed.", err);
@@ -289,31 +318,25 @@ const initDarkAGI = async () => {
         // Fallback or Error State
         if (err.message === "Invalid API Key") {
              if (status) {
-                status.textContent = "ACCESS DENIED (KEY INVALID)";
+                status.textContent = "ACCESS DENIED";
                 status.className = "text-red-500 font-mono font-bold";
             }
-            const inputField = document.getElementById('darkagi-input');
-            const sendBtn = document.getElementById('darkagi-send-btn');
-            if(inputField) {
-                inputField.disabled = true;
-                inputField.placeholder = "System Locked: Invalid API Key";
-            }
-            if(sendBtn) sendBtn.disabled = true;
-            return; // Stop here
+            clearStoredKey(); // Clear bad key
+            appendDarkAGIMessage('assistant', "ERROR: INVALID API KEY.\nPlease enter a valid OpenRouter API Key.");
+            return; 
         }
 
         // Regular Fallback for model list failure
         darkAgiState.models = FALLBACK_MODELS;
+        darkAgiState.initialized = true;
         const display = document.getElementById('darkagi-model-display');
         if(display) display.innerText = "LOCAL FALLBACK";
 
         if (status) {
-            status.textContent = "OFFLINE (LOCAL MODE)";
+            status.textContent = "OFFLINE MODE";
             status.className = "text-orange-500 font-mono font-bold";
         }
-    } finally {
-        darkAgiState.initialized = true;
-    }
+    } 
 };
 
 const appendDarkAGIMessage = (role, text, metrics = null) => {
@@ -356,7 +379,9 @@ const appendDarkAGIMessage = (role, text, metrics = null) => {
     container.appendChild(div);
     container.scrollTop = container.scrollHeight;
     
-    darkAgiState.history.push({ role, content: text });
+    if (role !== 'system') { // Don't add system prompts to history context generally, or depends on logic. Here we just push.
+        darkAgiState.history.push({ role, content: text });
+    }
 };
 
 // Extracted Core Logic for reuse (Retry)
@@ -365,6 +390,12 @@ const executeAIRequest = async () => {
 
     const btn = document.getElementById('darkagi-send-btn');
     const container = document.getElementById('darkagi-chat-container');
+    const key = getStoredKey();
+
+    if (!key) {
+        appendDarkAGIMessage('assistant', "Authentication missing. Please enter your API Key.");
+        return;
+    }
     
     darkAgiState.loading = true;
     if(btn) {
@@ -411,7 +442,7 @@ const executeAIRequest = async () => {
         const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
             method: "POST",
             headers: {
-                "Authorization": `Bearer ${DARKAGI_API_KEY}`,
+                "Authorization": `Bearer ${key}`,
                 "Content-Type": "application/json",
                 "HTTP-Referer": "https://github.com/boristown/DarkAGI", 
                 "X-Title": "BorisTown Toolkits"
@@ -530,23 +561,52 @@ const handleDarkAGISend = async (e) => {
 
     const input = document.getElementById('darkagi-input');
     const message = input.value.trim();
-
     if (!message) return;
 
-    // UI Updates
+    // Check Authorization Logic
+    if (!getStoredKey()) {
+        if (message.startsWith('sk-or-')) {
+             setStoredKey(message);
+             input.value = '';
+             // Mask user input visually in chat history
+             appendDarkAGIMessage('user', '********************************');
+             appendDarkAGIMessage('assistant', 'ACCESS TOKEN ACCEPTED. INITIALIZING LINK...');
+             initDarkAGI();
+        } else {
+             input.value = '';
+             appendDarkAGIMessage('user', message);
+             appendDarkAGIMessage('assistant', 'ERROR: INVALID TOKEN FORMAT.\nKey must start with "sk-or-".');
+        }
+        return;
+    }
+
+    // Regular Chat Logic
     input.value = '';
     input.style.height = 'auto'; 
     appendDarkAGIMessage('user', message);
-    
-    // Call Core Logic (Model selection happens inside)
     executeAIRequest();
 };
+
+// New feature: Clear Key
+const clearKeyAndReset = () => {
+    if(confirm("Disconnect and clear stored API Key?")) {
+        clearStoredKey();
+        location.reload();
+    }
+};
+// Bind to window for HTML access if needed, though we attach listener below
+window.clearKeyAndReset = clearKeyAndReset;
 
 document.getElementById('darkagi-form')?.addEventListener('submit', handleDarkAGISend);
 // Listen for New Chat button click
 document.getElementById('darkagi-new-chat-btn')?.addEventListener('click', (e) => {
     e.preventDefault();
     resetDarkAGIChat();
+});
+// Listen for Reset Key button (will be added to HTML)
+document.getElementById('darkagi-reset-key-btn')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    clearKeyAndReset();
 });
 
 // --- ROUTING LOGIC ---
