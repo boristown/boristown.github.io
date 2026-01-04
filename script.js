@@ -170,11 +170,18 @@ const initDarkAGI = async () => {
 
     try {
         status.textContent = "Fetching models...";
+        status.className = "text-yellow-500 animate-pulse";
+        
         const response = await fetch('https://openrouter.ai/api/v1/models');
+        if (!response.ok) throw new Error("Failed to fetch models");
+        
         const data = await response.json();
         
-        // Filter for free models
-        const freeModels = data.data.filter(m => m.id.endsWith(':free') || m.pricing.prompt === "0");
+        // Strictly filter for models ending in ':free'
+        let freeModels = data.data.filter(m => m.id.endsWith(':free'));
+        
+        // Sort alphabetically
+        freeModels.sort((a, b) => a.id.localeCompare(b.id));
         
         // Populate select
         select.innerHTML = '';
@@ -185,9 +192,14 @@ const initDarkAGI = async () => {
                 opt.textContent = m.name || m.id;
                 select.appendChild(opt);
             });
-            // Try to set a good default
-            const gemini = freeModels.find(m => m.id.includes('gemini'));
-            if (gemini) select.value = gemini.id;
+            
+            // Default preference: Gemini Free -> Other Gemini -> First available
+            const preferred = freeModels.find(m => m.id.includes('gemini') && m.id.includes('flash'));
+            if (preferred) {
+                select.value = preferred.id;
+            } else {
+                 select.selectedIndex = 0;
+            }
         } else {
             const opt = document.createElement('option');
             opt.textContent = "No free models found";
@@ -201,7 +213,7 @@ const initDarkAGI = async () => {
 
     } catch (err) {
         console.error("Failed to init DarkAGI", err);
-        status.textContent = "Connection Error";
+        status.textContent = "Network Error";
         status.className = "text-red-500 font-bold";
         select.innerHTML = '<option>Error loading models</option>';
     }
@@ -212,13 +224,15 @@ const appendDarkAGIMessage = (role, text) => {
     const div = document.createElement('div');
     div.className = "flex w-full " + (role === 'user' ? "justify-end" : "justify-start");
     
-    let contentHtml = text.replace(/\n/g, '<br>');
+    // Simple safety escape then line breaks
+    let safeText = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    let contentHtml = safeText.replace(/\n/g, '<br>');
     
     div.innerHTML = `
         <div class="${role === 'user' 
             ? 'bg-violet-600 text-white rounded-2xl rounded-tr-none' 
             : 'bg-slate-800 text-slate-200 rounded-2xl rounded-tl-none border border-slate-700 shadow-md'} px-5 py-3.5 max-w-[85%]">
-            <p class="text-sm leading-relaxed">${contentHtml}</p>
+            <p class="text-sm leading-relaxed whitespace-pre-wrap">${text}</p>
         </div>
     `;
     
@@ -270,7 +284,9 @@ const handleDarkAGISend = async (e) => {
             method: "POST",
             headers: {
                 "Authorization": `Bearer ${DARKAGI_API_KEY}`,
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "HTTP-Referer": window.location.href, // Required for Free Tier
+                "X-Title": "BorisTown Toolkits"      // Required for Free Tier
             },
             body: JSON.stringify({
                 "model": model,
@@ -278,7 +294,11 @@ const handleDarkAGISend = async (e) => {
             })
         });
 
-        if (!response.ok) throw new Error("API Error");
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            const errorMessage = errorData.error?.message || `Status Code: ${response.status}`;
+            throw new Error(errorMessage);
+        }
 
         const data = await response.json();
         const aiText = data.choices[0]?.message?.content || "No response received.";
@@ -290,7 +310,22 @@ const handleDarkAGISend = async (e) => {
     } catch (err) {
         console.error(err);
         loadingDiv.remove();
-        appendDarkAGIMessage('assistant', "Error: Failed to connect to neural net. " + err.message);
+        
+        // Show clearer error message to user
+        const errorHtml = `
+            <span class="text-red-400 font-bold">Connection Error:</span> ${err.message}<br>
+            <span class="text-xs text-slate-500 mt-2 block">Tip: Check if the model is currently available or if the API key is valid.</span>
+        `;
+        
+        const div = document.createElement('div');
+        div.className = "flex justify-start w-full";
+        div.innerHTML = `
+            <div class="bg-slate-800 border border-red-900/50 rounded-2xl rounded-tl-none px-5 py-3.5 max-w-[85%] shadow-md">
+                <p class="text-sm leading-relaxed">${errorHtml}</p>
+            </div>
+        `;
+        container.appendChild(div);
+        
     } finally {
         darkAgiState.loading = false;
         btn.disabled = false;
