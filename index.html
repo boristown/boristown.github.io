@@ -126,7 +126,7 @@
                              <h2 class="text-lg font-bold text-white tracking-tight">DarkAGI</h2>
                              <div class="flex items-center text-xs text-slate-400 space-x-2">
                                  <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
-                                 <span id="darkagi-status">Online</span>
+                                 <span>Online</span>
                              </div>
                          </div>
                     </div>
@@ -170,7 +170,7 @@
         </div>
 
         <!-- VIEW: BASE64 TOOL -->
-        <div id="view-tool" class="hidden w-full flex flex-col items-center">
+        <div id="view-tool" class="hidden w-full flex flex-col items-center" style="display: none;">
             
             <!-- Breadcrumb -->
             <div class="w-full max-w-4xl mx-auto mb-6 flex items-center">
@@ -292,7 +292,7 @@
         </div>
 
         <!-- VIEW: AIMO DASHBOARD -->
-        <div id="view-aimo" class="hidden w-full max-w-7xl mx-auto">
+        <div id="view-aimo" class="hidden w-full max-w-7xl mx-auto" style="display: none;">
             
             <!-- Breadcrumb -->
             <div class="mb-6 flex items-center justify-between">
@@ -307,9 +307,8 @@
                     Competition Active
                 </span>
             </div>
-
-            <!-- Header -->
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 mb-8">
+            <!-- (Content omitted for brevity, logic handled by JS) -->
+             <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 mb-8">
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                     <div>
                         <h2 class="text-3xl font-extrabold text-slate-900 mb-2">AIMO Progress Prize 3</h2>
@@ -325,11 +324,8 @@
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                
-                <!-- Left Column: Links & Baselines -->
+                <!-- Left Column -->
                 <div class="lg:col-span-2 space-y-8">
-                    
-                    <!-- Essential Links -->
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <a href="https://www.kaggle.com/competitions/ai-mathematical-olympiad-progress-prize-3/data" target="_blank" rel="noopener noreferrer" class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:border-kaggle-500 hover:shadow-md transition-all group">
                             <div class="text-slate-400 group-hover:text-kaggle-500 mb-2">
@@ -341,7 +337,7 @@
                             <p class="text-xs text-slate-500 mt-1">Access competition files</p>
                         </a>
                         <a href="https://www.kaggle.com/competitions/ai-mathematical-olympiad-progress-prize-3/discussion" target="_blank" rel="noopener noreferrer" class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:border-kaggle-500 hover:shadow-md transition-all group">
-                            <div class="text-slate-400 group-hover:text-kaggle-500 mb-2">
+                             <div class="text-slate-400 group-hover:text-kaggle-500 mb-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 0 1-.825-.242m9.345-8.334a2.126 2.126 0 0 0-.476-.095 48.64 48.64 0 0 0-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0 0 11.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155" />
                                 </svg>
@@ -359,26 +355,21 @@
                             <p class="text-xs text-slate-500 mt-1">Evaluation & Prizes</p>
                         </a>
                     </div>
-
-                    <!-- Baselines Section -->
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                          <div class="px-6 py-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
                             <h3 class="font-bold text-slate-800">Baseline Approaches</h3>
                             <span class="text-xs text-slate-500 bg-white border border-slate-200 px-2 py-1 rounded">Community</span>
                         </div>
                         <div class="p-6">
-                            <div id="aimo-baselines-list" class="space-y-4">
-                                <!-- JS Injected Content -->
-                            </div>
+                            <div id="aimo-baselines-list" class="space-y-4"></div>
                             <a href="https://www.kaggle.com/competitions/ai-mathematical-olympiad-progress-prize-3/code" target="_blank" rel="noopener noreferrer" class="block text-center text-sm font-medium text-kaggle-600 hover:text-kaggle-500 py-4 mt-2 border-t border-slate-100 transition-colors">
                                 Explore all Code on Kaggle &rarr;
                             </a>
                         </div>
                     </div>
-
                 </div>
 
-                <!-- Right Column: Leaderboard Widget -->
+                <!-- Right Column -->
                 <div class="lg:col-span-1">
                     <div class="bg-slate-900 rounded-2xl shadow-xl overflow-hidden text-white relative">
                         <div class="p-6 border-b border-slate-800 bg-slate-800/50">
@@ -388,12 +379,8 @@
                             </h3>
                             <p class="text-slate-400 text-xs mt-1">Top teams ranked by accuracy.</p>
                         </div>
-                        
                         <div class="p-6">
-                            <!-- JS Injected Content -->
-                            <div id="aimo-leaderboard-list" class="space-y-3 mb-6">
-                            </div>
-
+                            <div id="aimo-leaderboard-list" class="space-y-3 mb-6"></div>
                             <div class="text-center pt-2">
                                 <p class="text-xs text-slate-500 mb-3">*Data is simulated for display</p>
                                 <a href="https://www.kaggle.com/competitions/ai-mathematical-olympiad-progress-prize-3/leaderboard" target="_blank" rel="noopener noreferrer" class="block w-full bg-kaggle-500 hover:bg-kaggle-600 text-white font-bold py-2 rounded-lg transition-colors text-sm">
@@ -402,23 +389,18 @@
                             </div>
                         </div>
                     </div>
-
-                    <!-- Note -->
                     <div class="mt-6 bg-yellow-50 border border-yellow-200 rounded-xl p-4">
                         <h4 class="text-yellow-800 font-bold text-sm mb-1">Competition Tip</h4>
                         <p class="text-yellow-700 text-xs">
                             This competition requires high reasoning capabilities. Models like DeepSeek-Math and specialized fine-tunes on math datasets (like MATH, GSM8K) are performing well.
                         </p>
                     </div>
-
                 </div>
-
             </div>
-
         </div>
 
         <!-- VIEW: DARKAGI (New) -->
-        <div id="view-darkagi" class="hidden w-full h-[calc(100vh-140px)] max-w-6xl mx-auto flex flex-col bg-slate-900 rounded-2xl shadow-2xl border border-slate-700 overflow-hidden mb-4">
+        <div id="view-darkagi" class="hidden w-full max-w-6xl mx-auto h-[calc(100vh-140px)] mb-4" style="display: none;">
             
             <!-- Header -->
             <div class="bg-slate-800 border-b border-slate-700 p-4 flex items-center justify-between shrink-0">

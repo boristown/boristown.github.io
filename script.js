@@ -154,7 +154,7 @@ const renderAimoDashboard = () => {
 
 // --- DARKAGI LOGIC ---
 
-// Provided key by user
+// Provided key by user - HARDCODED
 const DARKAGI_API_KEY = "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";
 
 // Hardcoded fallback models in case API fails
@@ -204,8 +204,10 @@ const initDarkAGI = async () => {
     const status = document.getElementById('darkagi-status');
 
     try {
-        status.textContent = "Fetching models...";
-        status.className = "text-yellow-500 animate-pulse";
+        if (status) {
+            status.textContent = "Fetching models...";
+            status.className = "text-yellow-500 animate-pulse";
+        }
         
         // Attempt to fetch fresh models
         const response = await fetch('https://openrouter.ai/api/v1/models');
@@ -223,8 +225,10 @@ const initDarkAGI = async () => {
         darkAgiState.models = freeModels;
         populateModelSelect(freeModels);
         
-        status.textContent = "Online";
-        status.className = "text-green-500 font-bold";
+        if (status) {
+            status.textContent = "Online";
+            status.className = "text-green-500 font-bold";
+        }
 
     } catch (err) {
         console.warn("DarkAGI Model Fetch Failed, using fallback list.", err);
@@ -233,8 +237,10 @@ const initDarkAGI = async () => {
         darkAgiState.models = FALLBACK_MODELS;
         populateModelSelect(FALLBACK_MODELS);
 
-        status.textContent = "Offline (Fallback)";
-        status.className = "text-orange-500 font-bold";
+        if (status) {
+            status.textContent = "Offline (Fallback)";
+            status.className = "text-orange-500 font-bold";
+        }
     } finally {
         darkAgiState.initialized = true;
     }
@@ -379,33 +385,42 @@ const handleDarkAGISend = async (e) => {
 document.getElementById('darkagi-form')?.addEventListener('submit', handleDarkAGISend);
 
 // --- ROUTING LOGIC ---
-const viewHome = document.getElementById('view-home');
-const viewTool = document.getElementById('view-tool');
-const viewAimo = document.getElementById('view-aimo');
-const viewDarkAgi = document.getElementById('view-darkagi');
+
+// Helper to set view visibility using both classes and inline styles for robustness
+const setViewVisibility = (id, isVisible) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    
+    if (isVisible) {
+        el.classList.remove('hidden');
+        el.style.display = ''; // Remove inline display:none
+    } else {
+        el.classList.add('hidden');
+        el.style.display = 'none'; // Force inline display:none
+    }
+};
 
 const handleRoute = () => {
     // Normalize hash: #/aimo -> #aimo, #aimo -> #aimo
     const hash = window.location.hash.replace('#/', '#');
     
-    // Reset all views
-    viewHome.classList.add('hidden');
-    viewTool.classList.add('hidden');
-    viewAimo.classList.add('hidden');
-    viewDarkAgi.classList.add('hidden');
+    // Determine which view to show
+    const isTool = hash === '#base64';
+    const isAimo = hash === '#aimo';
+    const isDarkAgi = hash === '#darkagi';
+    const isHome = !isTool && !isAimo && !isDarkAgi;
 
-    // Simple Router
-    if (hash === '#base64') {
-        viewTool.classList.remove('hidden');
-    } else if (hash === '#aimo') {
-        viewAimo.classList.remove('hidden');
+    // Apply visibility
+    setViewVisibility('view-home', isHome);
+    setViewVisibility('view-tool', isTool);
+    setViewVisibility('view-aimo', isAimo);
+    setViewVisibility('view-darkagi', isDarkAgi);
+
+    // Initialize specific logic
+    if (isAimo) {
         renderAimoDashboard();
-    } else if (hash === '#darkagi') {
-        viewDarkAgi.classList.remove('hidden');
+    } else if (isDarkAgi) {
         initDarkAGI();
-    } else {
-        // Default to Home
-        viewHome.classList.remove('hidden');
     }
 };
 
