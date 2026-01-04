@@ -4,7 +4,7 @@ const AIMO_BASELINES = [
     {
         title: "DeepSeek-Math 7B RL",
         score: "20.4",
-        desc: "Chain-of-thought prompting with DeepSeek-Math-7B-RL model.",
+        desc: "使用 DeepSeek-Math-7B-RL 模型的思维链提示方法。",
         tags: ["Notebook", "Python"],
         color: "bg-blue-900/30 text-blue-400 border border-blue-800",
         initial: "DS",
@@ -13,7 +13,7 @@ const AIMO_BASELINES = [
     {
         title: "NuminaMath 7B TIR",
         score: "18.2",
-        desc: "Tool-integrated reasoning approach using NuminaMath.",
+        desc: "使用 NuminaMath 的工具集成推理方法。",
         tags: ["Notebook", "TIR"],
         color: "bg-purple-900/30 text-purple-400 border border-purple-800",
         initial: "NM",
@@ -22,7 +22,7 @@ const AIMO_BASELINES = [
      {
         title: "Qwen2.5-Math-7B-Instruct",
         score: "16.8",
-        desc: "Standard CoT baseline with the new Qwen2.5 Math model.",
+        desc: "基于新款 Qwen2.5 Math 模型的标准 CoT 基线。",
         tags: ["Starter"],
         color: "bg-emerald-900/30 text-emerald-400 border border-emerald-800",
         initial: "QW",
@@ -50,7 +50,7 @@ const renderBaselines = () => {
                 <div class="flex-grow">
                     <div class="flex justify-between items-start">
                         <h4 class="font-bold text-slate-300 group-hover:text-cyan-400 transition-colors">${item.title}</h4>
-                        <span class="text-xs font-mono bg-slate-900 border border-slate-700 text-slate-400 px-2 py-1 rounded">LB: ${item.score}</span>
+                        <span class="text-xs font-mono bg-slate-900 border border-slate-700 text-slate-400 px-2 py-1 rounded">榜单分: ${item.score}</span>
                     </div>
                     <p class="text-sm text-slate-500 mt-1">${item.desc}</p>
                     <div class="mt-3 flex gap-2">
@@ -83,7 +83,7 @@ const renderLeaderboardList = (data) => {
                 </div>
                 <div class="flex-grow">
                     <div class="text-sm font-medium text-slate-300">${item.name}</div>
-                    <div class="text-xs text-slate-500">${item.entries || '-'} entries</div>
+                    <div class="text-xs text-slate-500">${item.entries || '-'} 次提交</div>
                 </div>
                 <div class="font-mono font-bold text-emerald-400">${item.score}</div>
             </div>
@@ -100,7 +100,7 @@ const fetchLeaderboardData = async () => {
     leaderboardContainer.innerHTML = `
         <div class="flex flex-col items-center justify-center py-8 text-slate-600 space-y-3">
             <div class="w-6 h-6 border-2 border-slate-700 border-t-cyan-500 rounded-full animate-spin"></div>
-            <p class="text-xs font-mono">SYNCING DATA...</p>
+            <p class="text-xs font-mono">正在同步数据...</p>
         </div>
     `;
 
@@ -146,17 +146,22 @@ const getStoredKey = () => localStorage.getItem(STORAGE_KEY);
 const setStoredKey = (key) => localStorage.setItem(STORAGE_KEY, key);
 const clearStoredKey = () => localStorage.removeItem(STORAGE_KEY);
 
-// Hardcoded fallback models
+// System Prompt for DarkAGI Persona
+const SYSTEM_PROMPT = {
+    role: "system",
+    content: "你的名字叫做暗黑AGI，英文名DarkAGI。请使用中文与用户对话。"
+};
+
+// Hardcoded fallback models - Excluded Google/Gemini
 const FALLBACK_MODELS = [
-    { id: "google/gemini-2.0-flash-exp:free", name: "Gemini 2.0 Flash (Free)" },
-    { id: "google/gemini-2.0-flash-thinking-exp:free", name: "Gemini 2.0 Thinking (Free)" },
     { id: "meta-llama/llama-3.2-11b-vision-instruct:free", name: "Llama 3.2 11B (Free)" },
-    { id: "microsoft/phi-3-mini-128k-instruct:free", name: "Phi-3 Mini (Free)" }
+    { id: "microsoft/phi-3-mini-128k-instruct:free", name: "Phi-3 Mini (Free)" },
+    { id: "huggingfaceh4/zephyr-7b-beta:free", name: "Zephyr 7B (Free)" }
 ];
 
 let darkAgiState = {
     initialized: false,
-    history: [],
+    history: [SYSTEM_PROMPT],
     models: [],
     loading: false
 };
@@ -182,7 +187,7 @@ const selectRandomModelWithAnimation = async () => {
             // Randomly pick a model for visual effect
             const randomModel = models[Math.floor(Math.random() * models.length)];
             const name = (randomModel.name || randomModel.id).replace(':free', '');
-            display.innerText = `SCANNING [${name}]...`;
+            display.innerText = `正在扫描 [${name}]...`;
             
             elapsed += intervalTime;
             
@@ -206,8 +211,8 @@ const selectRandomModelWithAnimation = async () => {
 };
 
 const resetDarkAGIChat = () => {
-    // 1. Reset history state
-    darkAgiState.history = [];
+    // 1. Reset history state - KEEP SYSTEM PROMPT
+    darkAgiState.history = [SYSTEM_PROMPT];
     
     // 2. Clear DOM
     const container = document.getElementById('darkagi-chat-container');
@@ -216,9 +221,9 @@ const resetDarkAGIChat = () => {
             <div class="flex justify-start">
                 <div class="bg-slate-800/80 backdrop-blur text-slate-300 rounded-2xl rounded-tl-none px-6 py-4 max-w-[85%] border border-slate-700 shadow-xl">
                     <p class="text-sm leading-relaxed font-mono">
-                        <span class="text-indigo-400">SYS>></span> Session Reset.<br>
-                        <span class="text-indigo-400">SYS>></span> Grid Mode: Random Allocation.<br><br>
-                        Awaiting command.
+                        <span class="text-indigo-400">系统>></span> 会话重置。<br>
+                        <span class="text-indigo-400">系统>></span> 网格模式：随机分配。<br><br>
+                        等待指令。
                     </p>
                 </div>
             </div>
@@ -228,14 +233,14 @@ const resetDarkAGIChat = () => {
     // Visual reset only
     const display = document.getElementById('darkagi-model-display');
     if(display) {
-        display.innerText = "STANDBY";
+        display.innerText = "待机";
         display.classList.remove("text-cyan-400", "glitch-text");
         display.classList.add("text-slate-500");
     }
     
     // Check key again logic
     if (!getStoredKey()) {
-        appendDarkAGIMessage('assistant', "IDENTITY VERIFICATION REQUIRED.\n\nPlease enter your OpenRouter API Key to initialize the system.\n(Keys are stored locally only).");
+        appendDarkAGIMessage('assistant', "需要身份验证。\n\n请输入您的 OpenRouter API Key 以初始化系统。\n(密钥仅存储在本地)。");
     }
 };
 
@@ -246,15 +251,15 @@ const initDarkAGI = async () => {
     // 1. Check for Key
     if (!key) {
         if (status) {
-             status.textContent = "AUTH REQUIRED";
+             status.textContent = "需要认证";
              status.className = "text-yellow-500 font-mono animate-pulse";
         }
         const display = document.getElementById('darkagi-model-display');
         if(display) {
-            display.innerText = "LOCKED";
+            display.innerText = "已锁定";
             display.classList.add("text-red-500");
         }
-        appendDarkAGIMessage('assistant', "SYSTEM ALERT: NO ACCESS TOKEN FOUND.\n\nPlease enter your OpenRouter API Key (sk-or-...) to initialize the neural grid.\n\n[Security: Keys are stored in localStorage]");
+        appendDarkAGIMessage('assistant', "系统警告：未检测到访问令牌。\n\n请输入您的 OpenRouter API Key (sk-or-...) 以初始化神经网格。\n\n[安全提示：密钥仅存储在本地]");
         return;
     }
 
@@ -263,7 +268,7 @@ const initDarkAGI = async () => {
     try {
         // 2. Validate Key State
         if (status) {
-            status.textContent = "VERIFYING KEY...";
+            status.textContent = "正在验证密钥...";
             status.className = "text-yellow-500 font-mono animate-pulse";
         }
 
@@ -280,14 +285,19 @@ const initDarkAGI = async () => {
         
         // 3. Fetch Models
         if (status) {
-            status.textContent = "FETCHING MODELS...";
+            status.textContent = "正在获取模型...";
         }
 
         const response = await fetch('https://openrouter.ai/api/v1/models');
         if (!response.ok) throw new Error("Failed to fetch models");
         
         const data = await response.json();
-        let freeModels = data.data.filter(m => m.id.endsWith(':free'));
+        
+        // Filter: Must be free AND NOT Google
+        let freeModels = data.data.filter(m => 
+            m.id.endsWith(':free') && 
+            !m.id.toLowerCase().includes('google')
+        );
         
         if (freeModels.length === 0) {
             // If no free models returned (unlikely), fallback
@@ -299,18 +309,18 @@ const initDarkAGI = async () => {
         // Initial visual check
         const display = document.getElementById('darkagi-model-display');
         if(display) {
-             display.innerText = `GRID ONLINE (${freeModels.length} NODES)`;
+             display.innerText = `网格在线 (${freeModels.length} 节点)`;
              display.classList.remove("text-red-500", "text-slate-500");
              display.classList.add("text-emerald-500");
         }
         
         if (status) {
-            status.textContent = "SYSTEM ONLINE";
+            status.textContent = "系统在线";
             status.className = "text-green-500 font-mono font-bold";
         }
         
         darkAgiState.initialized = true;
-        appendDarkAGIMessage('assistant', "CONNECTION ESTABLISHED. READY.");
+        appendDarkAGIMessage('assistant', "连接已建立。就绪。");
 
     } catch (err) {
         console.warn("DarkAGI Init Failed.", err);
@@ -318,11 +328,11 @@ const initDarkAGI = async () => {
         // Fallback or Error State
         if (err.message === "Invalid API Key") {
              if (status) {
-                status.textContent = "ACCESS DENIED";
+                status.textContent = "访问被拒绝";
                 status.className = "text-red-500 font-mono font-bold";
             }
             clearStoredKey(); // Clear bad key
-            appendDarkAGIMessage('assistant', "ERROR: INVALID API KEY.\nPlease enter a valid OpenRouter API Key.");
+            appendDarkAGIMessage('assistant', "错误：无效的 API Key。\n请重新输入有效的 OpenRouter API Key。");
             return; 
         }
 
@@ -330,10 +340,10 @@ const initDarkAGI = async () => {
         darkAgiState.models = FALLBACK_MODELS;
         darkAgiState.initialized = true;
         const display = document.getElementById('darkagi-model-display');
-        if(display) display.innerText = "LOCAL FALLBACK";
+        if(display) display.innerText = "本地回退模式";
 
         if (status) {
-            status.textContent = "OFFLINE MODE";
+            status.textContent = "离线模式";
             status.className = "text-orange-500 font-mono font-bold";
         }
     } 
@@ -358,13 +368,13 @@ const appendDarkAGIMessage = (role, text, metrics = null) => {
         const modelName = metrics.model.replace(':free', '');
         metricsHtml = `
             <div class="mt-2 pt-2 border-t border-slate-500/20 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-mono text-slate-400/80 select-none">
-                <span class="flex items-center text-cyan-400" title="Model Used">
+                <span class="flex items-center text-cyan-400" title="使用的模型">
                     <span class="w-1.5 h-1.5 bg-cyan-500 rounded-full mr-1.5"></span>
                     ${modelName}
                 </span>
-                <span title="Prompt Tokens">In: <span class="text-slate-300">${metrics.input || '?'}</span></span>
-                <span title="Completion Tokens">Out: <span class="text-slate-300">${metrics.output || '?'}</span></span>
-                <span title="Latency" class="ml-auto text-emerald-400">${metrics.time}ms</span>
+                <span title="输入 Token">入: <span class="text-slate-300">${metrics.input || '?'}</span></span>
+                <span title="输出 Token">出: <span class="text-slate-300">${metrics.output || '?'}</span></span>
+                <span title="耗时" class="ml-auto text-emerald-400">${metrics.time}ms</span>
             </div>
         `;
     }
@@ -379,7 +389,7 @@ const appendDarkAGIMessage = (role, text, metrics = null) => {
     container.appendChild(div);
     container.scrollTop = container.scrollHeight;
     
-    if (role !== 'system') { // Don't add system prompts to history context generally, or depends on logic. Here we just push.
+    if (role !== 'system') { // Don't add system prompts to history context generally
         darkAgiState.history.push({ role, content: text });
     }
 };
@@ -393,7 +403,7 @@ const executeAIRequest = async () => {
     const key = getStoredKey();
 
     if (!key) {
-        appendDarkAGIMessage('assistant', "Authentication missing. Please enter your API Key.");
+        appendDarkAGIMessage('assistant', "认证丢失。请重新输入您的 API Key。");
         return;
     }
     
@@ -411,8 +421,8 @@ const executeAIRequest = async () => {
     }
     
     if (!model) {
-        // Fallback safety
-        model = "google/gemini-2.0-flash-exp:free"; 
+        // Fallback safety - Default to Llama instead of Google
+        model = "meta-llama/llama-3.2-11b-vision-instruct:free"; 
     }
 
     // Add Loading Indicator
@@ -464,7 +474,7 @@ const executeAIRequest = async () => {
         }
 
         const data = await response.json();
-        const aiText = data.choices[0]?.message?.content || "No response received.";
+        const aiText = data.choices[0]?.message?.content || "未收到响应。";
         
         // Extract Usage Stats
         const usage = data.usage || { prompt_tokens: '?', completion_tokens: '?' };
@@ -483,33 +493,33 @@ const executeAIRequest = async () => {
         console.error(err);
         loadingDiv.remove();
         
-        let errorMessage = "Unknown Error";
+        let errorMessage = "未知错误";
         let detailedDebug = "";
 
         // Check if it's our custom error object containing response info
         if (err.responseText !== undefined) {
              try {
                 const jsonError = JSON.parse(err.responseText);
-                errorMessage = jsonError.error?.message || jsonError.message || `API Error ${err.status}`;
+                errorMessage = jsonError.error?.message || jsonError.message || `API 错误 ${err.status}`;
             } catch (e) {
-                errorMessage = `API Error ${err.status}: ${err.responseText.substring(0, 50)}...`;
+                errorMessage = `API 错误 ${err.status}: ${err.responseText.substring(0, 50)}...`;
             }
 
             // Create detailed debug view
             detailedDebug = `
                 <div class="mt-2 space-y-2">
                     <details>
-                        <summary class="cursor-pointer text-indigo-400 hover:text-indigo-300 text-[10px] outline-none select-none">▶ VIEW REQUEST PAYLOAD</summary>
+                        <summary class="cursor-pointer text-indigo-400 hover:text-indigo-300 text-[10px] outline-none select-none">▶ 查看请求载荷</summary>
                         <pre class="mt-1 p-2 bg-slate-950 rounded text-[10px] overflow-x-auto whitespace-pre-wrap text-slate-400 border border-slate-800">${JSON.stringify(err.requestBody, null, 2)}</pre>
                     </details>
                     <details open>
-                        <summary class="cursor-pointer text-red-400 hover:text-red-300 text-[10px] outline-none select-none">▶ VIEW FULL RESPONSE</summary>
+                        <summary class="cursor-pointer text-red-400 hover:text-red-300 text-[10px] outline-none select-none">▶ 查看完整响应</summary>
                         <pre class="mt-1 p-2 bg-slate-950 rounded text-[10px] overflow-x-auto whitespace-pre-wrap text-red-300 border border-red-900/30">${err.responseText}</pre>
                     </details>
                 </div>
             `;
         } else {
-            errorMessage = err.message || "Network/Client Error";
+            errorMessage = err.message || "网络/客户端错误";
             detailedDebug = `<span class="text-slate-600 text-[10px] italic">${err.stack || ''}</span>`;
         }
         
@@ -521,9 +531,9 @@ const executeAIRequest = async () => {
         div.innerHTML = `
             <div class="bg-slate-900 border border-red-900 rounded-2xl rounded-tl-none px-5 py-3.5 max-w-[95%] shadow-md break-all">
                 <div class="flex justify-between items-start mb-2">
-                    <span class="text-red-400 font-bold font-mono text-xs">CONNECTION FAILURE</span>
+                    <span class="text-red-400 font-bold font-mono text-xs">连接失败</span>
                     <button onclick="window.retryDarkAGI('${errorId}')" class="text-[10px] bg-red-900/50 hover:bg-red-800 text-white px-2 py-1 rounded border border-red-700 transition-colors uppercase font-mono tracking-wider">
-                        Retry ⟳
+                        重试 ⟳
                     </button>
                 </div>
                 <div class="font-mono text-xs text-red-200 mb-2 p-2 bg-red-950/30 rounded border border-red-500/10">
@@ -570,12 +580,12 @@ const handleDarkAGISend = async (e) => {
              input.value = '';
              // Mask user input visually in chat history
              appendDarkAGIMessage('user', '********************************');
-             appendDarkAGIMessage('assistant', 'ACCESS TOKEN ACCEPTED. INITIALIZING LINK...');
+             appendDarkAGIMessage('assistant', '访问令牌已接受。正在初始化连接...');
              initDarkAGI();
         } else {
              input.value = '';
              appendDarkAGIMessage('user', message);
-             appendDarkAGIMessage('assistant', 'ERROR: INVALID TOKEN FORMAT.\nKey must start with "sk-or-".');
+             appendDarkAGIMessage('assistant', '错误：令牌格式无效。\n密钥必须以 "sk-or-" 开头。');
         }
         return;
     }
@@ -589,7 +599,7 @@ const handleDarkAGISend = async (e) => {
 
 // New feature: Clear Key
 const clearKeyAndReset = () => {
-    if(confirm("Disconnect and clear stored API Key?")) {
+    if(confirm("确定要断开连接并清除存储的 API Key 吗？")) {
         clearStoredKey();
         location.reload();
     }
@@ -683,9 +693,9 @@ const readFileAsText = (file) => {
         const reader = new FileReader();
         reader.onload = (event) => {
             if (event.target?.result) resolve(event.target.result);
-            else reject(new Error("Failed to read file content"));
+            else reject(new Error("无法读取文件内容"));
         };
-        reader.onerror = () => reject(new Error("File reading error"));
+        reader.onerror = () => reject(new Error("文件读取错误"));
         reader.readAsText(file);
     });
 };
@@ -696,7 +706,7 @@ const convertTextToZipBlob = (textContent) => {
     let base64String = reversedLines.join('');
     base64String = base64String.replace(/\s/g, '');
 
-    if (!base64String) throw new Error("Resulting string is empty.");
+    if (!base64String) throw new Error("结果字符串为空。");
 
     try {
         const binaryString = atob(base64String);
@@ -708,7 +718,7 @@ const convertTextToZipBlob = (textContent) => {
         return new Blob([bytes], { type: "application/zip" });
     } catch (error) {
         console.error(error);
-        throw new Error("Invalid Base64 content. Please ensure the file contains valid Base64 parts.");
+        throw new Error("Base64 内容无效。请确保文件包含有效的 Base64 片段。");
     }
 };
 
@@ -787,7 +797,7 @@ const setStatus = (newStatus, message = '', files = []) => {
     } else if (newStatus === STATES.SUCCESS) {
         stateSuccess.classList.remove('hidden');
         dropZone.classList.add('border-emerald-500/50');
-        successFileCount.textContent = `Files detected: ${files.length}`;
+        successFileCount.textContent = `检测到文件: ${files.length}`;
         
         fileListContainer.innerHTML = '';
         if (files.length > 0) {
@@ -805,7 +815,7 @@ const setStatus = (newStatus, message = '', files = []) => {
         } else {
              const li = document.createElement('li');
              li.className = "px-4 py-4 text-slate-500 text-xs italic font-mono";
-             li.textContent = "No valid zip structure detected.";
+             li.textContent = "未检测到有效的 zip 结构。";
              fileListContainer.appendChild(li);
         }
     } else if (newStatus === STATES.ERROR) {
@@ -843,7 +853,7 @@ const processFile = async (file) => {
         
         setStatus(STATES.SUCCESS, '', files);
     } catch (err) {
-        setStatus(STATES.ERROR, err.message || "An unexpected error occurred.");
+        setStatus(STATES.ERROR, err.message || "发生了意外错误。");
     }
 };
 
