@@ -316,7 +316,7 @@ const initDarkAGI = async () => {
     }
 };
 
-const appendDarkAGIMessage = (role, text) => {
+const appendDarkAGIMessage = (role, text, metrics = null) => {
     const container = document.getElementById('darkagi-chat-container');
     const div = document.createElement('div');
     div.className = "flex w-full " + (role === 'user' ? "justify-end" : "justify-start");
@@ -329,9 +329,27 @@ const appendDarkAGIMessage = (role, text) => {
         ? 'bg-indigo-600/90 text-white rounded-2xl rounded-tr-none shadow-lg shadow-indigo-900/20 border border-indigo-500/30'
         : 'bg-slate-800/80 text-slate-300 rounded-2xl rounded-tl-none border border-slate-700 shadow-xl backdrop-blur-sm';
 
+    // Metrics Footer HTML
+    let metricsHtml = '';
+    if (metrics) {
+        const modelName = metrics.model.replace(':free', '');
+        metricsHtml = `
+            <div class="mt-2 pt-2 border-t border-slate-500/20 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-mono text-slate-400/80 select-none">
+                <span class="flex items-center text-cyan-400" title="Model Used">
+                    <span class="w-1.5 h-1.5 bg-cyan-500 rounded-full mr-1.5"></span>
+                    ${modelName}
+                </span>
+                <span title="Prompt Tokens">In: <span class="text-slate-300">${metrics.input || '?'}</span></span>
+                <span title="Completion Tokens">Out: <span class="text-slate-300">${metrics.output || '?'}</span></span>
+                <span title="Latency" class="ml-auto text-emerald-400">${metrics.time}ms</span>
+            </div>
+        `;
+    }
+
     div.innerHTML = `
-        <div class="${bubbleClass} px-5 py-3.5 max-w-[85%]">
+        <div class="${bubbleClass} px-5 py-3.5 max-w-[85%] min-w-[300px]">
             <p class="text-sm leading-relaxed whitespace-pre-wrap font-mono">${contentHtml}</p>
+            ${metricsHtml}
         </div>
     `;
     
@@ -387,6 +405,8 @@ const executeAIRequest = async () => {
         "messages": darkAgiState.history
     };
 
+    const startTime = Date.now();
+
     try {
         const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
             method: "POST",
@@ -398,6 +418,9 @@ const executeAIRequest = async () => {
             },
             body: JSON.stringify(requestBody)
         });
+
+        const endTime = Date.now();
+        const latency = endTime - startTime;
 
         if (!response.ok) {
             const errorText = await response.text();
@@ -411,9 +434,19 @@ const executeAIRequest = async () => {
 
         const data = await response.json();
         const aiText = data.choices[0]?.message?.content || "No response received.";
+        
+        // Extract Usage Stats
+        const usage = data.usage || { prompt_tokens: '?', completion_tokens: '?' };
 
         loadingDiv.remove();
-        appendDarkAGIMessage('assistant', aiText);
+        
+        // Pass metrics to the append function
+        appendDarkAGIMessage('assistant', aiText, {
+            model: model,
+            input: usage.prompt_tokens,
+            output: usage.completion_tokens,
+            time: latency
+        });
 
     } catch (err) {
         console.error(err);
