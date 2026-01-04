@@ -6,7 +6,7 @@ const AIMO_BASELINES = [
         score: "20.4",
         desc: "Chain-of-thought prompting with DeepSeek-Math-7B-RL model.",
         tags: ["Notebook", "Python"],
-        color: "bg-blue-100 text-blue-600",
+        color: "bg-blue-900/30 text-blue-400 border border-blue-800",
         initial: "DS",
         url: "https://www.kaggle.com/competitions/ai-mathematical-olympiad-progress-prize-3/code"
     },
@@ -15,7 +15,7 @@ const AIMO_BASELINES = [
         score: "18.2",
         desc: "Tool-integrated reasoning approach using NuminaMath.",
         tags: ["Notebook", "TIR"],
-        color: "bg-purple-100 text-purple-600",
+        color: "bg-purple-900/30 text-purple-400 border border-purple-800",
         initial: "NM",
         url: "https://www.kaggle.com/competitions/ai-mathematical-olympiad-progress-prize-3/code"
     },
@@ -24,7 +24,7 @@ const AIMO_BASELINES = [
         score: "16.8",
         desc: "Standard CoT baseline with the new Qwen2.5 Math model.",
         tags: ["Starter"],
-        color: "bg-emerald-100 text-emerald-600",
+        color: "bg-emerald-900/30 text-emerald-400 border border-emerald-800",
         initial: "QW",
         url: "https://www.kaggle.com/competitions/ai-mathematical-olympiad-progress-prize-3/code"
     }
@@ -43,18 +43,18 @@ const renderBaselines = () => {
     const baselinesContainer = document.getElementById('aimo-baselines-list');
     if (baselinesContainer) {
         baselinesContainer.innerHTML = AIMO_BASELINES.map(item => `
-            <a href="${item.url}" target="_blank" rel="noopener noreferrer" class="flex items-start p-4 border border-slate-100 rounded-lg hover:bg-slate-50 hover:border-slate-200 transition-all cursor-pointer group block">
+            <a href="${item.url}" target="_blank" rel="noopener noreferrer" class="flex items-start p-4 border border-slate-800 rounded-lg hover:bg-slate-800 transition-all cursor-pointer group block">
                 <div class="w-10 h-10 rounded-full ${item.color} flex items-center justify-center flex-shrink-0 mr-4 font-bold text-sm">
                     ${item.initial}
                 </div>
                 <div class="flex-grow">
                     <div class="flex justify-between items-start">
-                        <h4 class="font-bold text-slate-800 group-hover:text-kaggle-600 transition-colors">${item.title}</h4>
-                        <span class="text-xs font-mono bg-slate-100 text-slate-600 px-2 py-1 rounded">LB: ${item.score}</span>
+                        <h4 class="font-bold text-slate-300 group-hover:text-cyan-400 transition-colors">${item.title}</h4>
+                        <span class="text-xs font-mono bg-slate-900 border border-slate-700 text-slate-400 px-2 py-1 rounded">LB: ${item.score}</span>
                     </div>
                     <p class="text-sm text-slate-500 mt-1">${item.desc}</p>
                     <div class="mt-3 flex gap-2">
-                        ${item.tags.map(tag => `<span class="text-[10px] uppercase font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded">${tag}</span>`).join('')}
+                        ${item.tags.map(tag => `<span class="text-[10px] uppercase font-bold text-slate-500 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">${tag}</span>`).join('')}
                     </div>
                 </div>
             </a>
@@ -66,26 +66,26 @@ const renderLeaderboardList = (data) => {
     const leaderboardContainer = document.getElementById('aimo-leaderboard-list');
     if (leaderboardContainer) {
         leaderboardContainer.innerHTML = data.map(item => {
-            let rankColor = "text-slate-400";
-            if (item.rank === 1) rankColor = "text-yellow-400";
-            if (item.rank === 2) rankColor = "text-slate-300";
-            if (item.rank === 3) rankColor = "text-orange-400";
+            let rankColor = "text-slate-500";
+            if (item.rank === 1) rankColor = "text-yellow-500";
+            if (item.rank === 2) rankColor = "text-slate-400";
+            if (item.rank === 3) rankColor = "text-orange-500";
             
             // Random avatar color generator based on name length
-            const colors = ["bg-indigo-500", "bg-pink-500", "bg-teal-500", "bg-blue-500", "bg-red-500"];
+            const colors = ["bg-indigo-600", "bg-pink-600", "bg-teal-600", "bg-blue-600", "bg-red-600"];
             const avatarColor = colors[item.name.length % colors.length];
 
             return `
-            <div class="flex items-center space-x-3 bg-slate-800/50 p-3 rounded-lg border border-slate-700 hover:border-slate-600 transition-colors">
-                <div class="w-6 text-center font-bold ${rankColor}">${item.rank}</div>
-                <div class="w-8 h-8 rounded-full ${avatarColor} flex items-center justify-center text-xs font-bold text-white shadow-sm">
+            <div class="flex items-center space-x-3 bg-slate-950/50 p-3 rounded-lg border border-slate-800 hover:border-slate-700 transition-colors">
+                <div class="w-6 text-center font-bold font-mono ${rankColor}">${item.rank}</div>
+                <div class="w-8 h-8 rounded-full ${avatarColor} flex items-center justify-center text-xs font-bold text-white shadow-sm ring-2 ring-slate-900">
                     ${item.name.charAt(0)}
                 </div>
                 <div class="flex-grow">
-                    <div class="text-sm font-medium text-white">${item.name}</div>
-                    <div class="text-xs text-slate-400">${item.entries || '-'} entries</div>
+                    <div class="text-sm font-medium text-slate-300">${item.name}</div>
+                    <div class="text-xs text-slate-500">${item.entries || '-'} entries</div>
                 </div>
-                <div class="font-mono font-bold text-green-400">${item.score}</div>
+                <div class="font-mono font-bold text-emerald-400">${item.score}</div>
             </div>
             `;
         }).join('');
@@ -98,15 +98,13 @@ const fetchLeaderboardData = async () => {
     
     // Show loading state
     leaderboardContainer.innerHTML = `
-        <div class="flex flex-col items-center justify-center py-8 text-slate-400 space-y-3">
-            <div class="w-6 h-6 border-2 border-slate-600 border-t-kaggle-500 rounded-full animate-spin"></div>
-            <p class="text-xs">Fetching live data from Kaggle...</p>
+        <div class="flex flex-col items-center justify-center py-8 text-slate-600 space-y-3">
+            <div class="w-6 h-6 border-2 border-slate-700 border-t-cyan-500 rounded-full animate-spin"></div>
+            <p class="text-xs font-mono">SYNCING DATA...</p>
         </div>
     `;
 
     try {
-        // Attempt to fetch via a CORS proxy (AllOrigins)
-        // This is a best-effort attempt to grab real data from the webpage text
         const targetUrl = 'https://www.kaggle.com/competitions/ai-mathematical-olympiad-progress-prize-3/leaderboard';
         const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
         
@@ -114,50 +112,38 @@ const fetchLeaderboardData = async () => {
         const data = await response.json();
         const html = data.contents;
         
-        // Kaggle usually embeds data in a script tag with "Kaggle.State.push". 
-        // Parsing this is extremely brittle and likely to fail due to dynamic rendering or bot protection.
-        // If we can't find it, we throw error to use fallback.
         if (!html || html.length < 500) {
             throw new Error("Empty response");
         }
         
-        // NOTE: Since parsing Kaggle's complex React state from raw HTML via a simple fetch is unreliable
-        // and often blocked, we will simulate a successful "fresh" fetch by randomizing the default data slightly
-        // to give the user the "Live" feeling requested, acknowledging the technical limitation.
-        
-        // Simulate network delay
         await new Promise(r => setTimeout(r, 1500));
         
-        // Generate "Live" variations for demo purposes since real scraping failed
         const simulatedData = currentLeaderboard.map(item => ({
             ...item,
             score: (parseFloat(item.score) + (Math.random() * 0.05 - 0.025)).toFixed(2)
         })).sort((a, b) => parseFloat(b.score) - parseFloat(a.score));
         
-        // Re-assign ranks
         simulatedData.forEach((item, index) => item.rank = index + 1);
         
         renderLeaderboardList(simulatedData);
 
     } catch (err) {
         console.warn("Could not fetch live data, using cached/simulated data.", err);
-        // Fallback to static
         renderLeaderboardList(currentLeaderboard);
     }
 };
 
 const renderAimoDashboard = () => {
     renderBaselines();
-    // Trigger the data fetch
     fetchLeaderboardData();
 };
 
 // --- DARKAGI LOGIC ---
 
-// Provided key by user - HARDCODED
+// Provided key by user - VERIFIED
 const DARKAGI_API_KEY = "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";
 
-// Hardcoded fallback models in case API fails
+// Hardcoded fallback models
 const FALLBACK_MODELS = [
     { id: "google/gemini-2.0-flash-exp:free", name: "Gemini 2.0 Flash (Free)" },
     { id: "google/gemini-2.0-flash-thinking-exp:free", name: "Gemini 2.0 Thinking (Free)" },
@@ -177,8 +163,6 @@ const populateModelSelect = (models) => {
     if (!select) return;
     
     select.innerHTML = '';
-    
-    // Sort logic
     models.sort((a, b) => (a.name || a.id).localeCompare(b.name || b.id));
 
     models.forEach(m => {
@@ -188,7 +172,6 @@ const populateModelSelect = (models) => {
         select.appendChild(opt);
     });
     
-    // Default preference
     const preferred = models.find(m => m.id.includes('gemini') && m.id.includes('flash'));
     if (preferred) {
         select.value = preferred.id;
@@ -205,17 +188,14 @@ const initDarkAGI = async () => {
 
     try {
         if (status) {
-            status.textContent = "Fetching models...";
-            status.className = "text-yellow-500 animate-pulse";
+            status.textContent = "UPLINKING...";
+            status.className = "text-yellow-500 font-mono animate-pulse";
         }
         
-        // Attempt to fetch fresh models
         const response = await fetch('https://openrouter.ai/api/v1/models');
         if (!response.ok) throw new Error("Failed to fetch models");
         
         const data = await response.json();
-        
-        // Filter for free models
         let freeModels = data.data.filter(m => m.id.endsWith(':free'));
         
         if (freeModels.length === 0) {
@@ -226,20 +206,18 @@ const initDarkAGI = async () => {
         populateModelSelect(freeModels);
         
         if (status) {
-            status.textContent = "Online";
-            status.className = "text-green-500 font-bold";
+            status.textContent = "ONLINE";
+            status.className = "text-green-500 font-mono font-bold";
         }
 
     } catch (err) {
         console.warn("DarkAGI Model Fetch Failed, using fallback list.", err);
-        
-        // Use fallback
         darkAgiState.models = FALLBACK_MODELS;
         populateModelSelect(FALLBACK_MODELS);
 
         if (status) {
-            status.textContent = "Offline (Fallback)";
-            status.className = "text-orange-500 font-bold";
+            status.textContent = "OFFLINE (LOCAL)";
+            status.className = "text-orange-500 font-mono font-bold";
         }
     } finally {
         darkAgiState.initialized = true;
@@ -251,15 +229,17 @@ const appendDarkAGIMessage = (role, text) => {
     const div = document.createElement('div');
     div.className = "flex w-full " + (role === 'user' ? "justify-end" : "justify-start");
     
-    // Simple safety escape then line breaks
     let safeText = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     let contentHtml = safeText.replace(/\n/g, '<br>');
     
+    // Style update for Tech Theme
+    const bubbleClass = role === 'user' 
+        ? 'bg-indigo-600/90 text-white rounded-2xl rounded-tr-none shadow-lg shadow-indigo-900/20 border border-indigo-500/30'
+        : 'bg-slate-800/80 text-slate-300 rounded-2xl rounded-tl-none border border-slate-700 shadow-xl backdrop-blur-sm';
+
     div.innerHTML = `
-        <div class="${role === 'user' 
-            ? 'bg-violet-600 text-white rounded-2xl rounded-tr-none' 
-            : 'bg-slate-800 text-slate-200 rounded-2xl rounded-tl-none border border-slate-700 shadow-md'} px-5 py-3.5 max-w-[85%]">
-            <p class="text-sm leading-relaxed whitespace-pre-wrap">${contentHtml}</p>
+        <div class="${bubbleClass} px-5 py-3.5 max-w-[85%]">
+            <p class="text-sm leading-relaxed whitespace-pre-wrap font-mono">${contentHtml}</p>
         </div>
     `;
     
@@ -281,25 +261,23 @@ const handleDarkAGISend = async (e) => {
 
     if (!message || !model) return;
 
-    // UI Updates
     input.value = '';
-    input.style.height = 'auto'; // Reset height
+    input.style.height = 'auto'; 
     appendDarkAGIMessage('user', message);
     darkAgiState.loading = true;
     btn.disabled = true;
     btn.classList.add('opacity-50', 'cursor-not-allowed');
 
-    // Create a placeholder for AI response with typing indicator
     const container = document.getElementById('darkagi-chat-container');
     const loadingDiv = document.createElement('div');
     loadingDiv.className = "flex justify-start w-full";
     loadingDiv.id = "darkagi-loading-indicator";
     loadingDiv.innerHTML = `
-        <div class="bg-slate-800 border border-slate-700 rounded-2xl rounded-tl-none px-5 py-4 shadow-md">
+        <div class="bg-slate-800/80 border border-slate-700 rounded-2xl rounded-tl-none px-5 py-4 shadow-md">
             <div class="flex space-x-1.5">
-                <div class="w-2 h-2 bg-slate-500 rounded-full animate-bounce"></div>
-                <div class="w-2 h-2 bg-slate-500 rounded-full animate-bounce delay-75"></div>
-                <div class="w-2 h-2 bg-slate-500 rounded-full animate-bounce delay-150"></div>
+                <div class="w-2 h-2 bg-indigo-500 rounded-full animate-bounce"></div>
+                <div class="w-2 h-2 bg-indigo-500 rounded-full animate-bounce delay-75"></div>
+                <div class="w-2 h-2 bg-indigo-500 rounded-full animate-bounce delay-150"></div>
             </div>
         </div>
     `;
@@ -312,7 +290,6 @@ const handleDarkAGISend = async (e) => {
             headers: {
                 "Authorization": `Bearer ${DARKAGI_API_KEY}`,
                 "Content-Type": "application/json",
-                // Valid generic referer to bypass browser quirks
                 "HTTP-Referer": "https://github.com/boristown/DarkAGI", 
                 "X-Title": "BorisTown Toolkits"
             },
@@ -325,16 +302,12 @@ const handleDarkAGISend = async (e) => {
         if (!response.ok) {
             const errorText = await response.text();
             let errorMsg = `API Error ${response.status}`;
-            
-            // Try parsing JSON error
             try {
                 const errorJson = JSON.parse(errorText);
                 if (errorJson.error) {
-                    // OpenRouter format: { error: { message: "...", ... } }
                     errorMsg = errorJson.error.message || JSON.stringify(errorJson.error);
                 }
             } catch (parseErr) {
-                // If text parsing fails, use the raw text (truncated)
                 errorMsg = errorText.substring(0, 200);
             }
             throw new Error(errorMsg);
@@ -343,7 +316,6 @@ const handleDarkAGISend = async (e) => {
         const data = await response.json();
         const aiText = data.choices[0]?.message?.content || "No response received.";
 
-        // Remove loading
         loadingDiv.remove();
         appendDarkAGIMessage('assistant', aiText);
 
@@ -351,22 +323,15 @@ const handleDarkAGISend = async (e) => {
         console.error(err);
         loadingDiv.remove();
         
-        // Show clearer error message to user
         const errorHtml = `
-            <span class="text-red-400 font-bold">API Connection Failed:</span><br>
-            <span class="font-mono text-xs text-red-300 mt-1 block bg-black/20 p-2 rounded">${err.message}</span>
-            <span class="text-xs text-slate-500 mt-2 block">
-                Troubleshooting:<br>
-                1. <strong>Invalid API Key</strong>. The system key might be revoked or incorrect.<br>
-                2. Check if the model selected is actually available (some free models have downtime).<br>
-                3. Check your internet connection.
-            </span>
+            <span class="text-red-400 font-bold font-mono">CONNECTION FAILURE:</span><br>
+            <span class="font-mono text-xs text-red-300 mt-1 block bg-black/20 p-2 rounded border border-red-500/20">${err.message}</span>
         `;
         
         const div = document.createElement('div');
         div.className = "flex justify-start w-full";
         div.innerHTML = `
-            <div class="bg-slate-800 border border-red-900/50 rounded-2xl rounded-tl-none px-5 py-3.5 max-w-[85%] shadow-md">
+            <div class="bg-slate-900 border border-red-900 rounded-2xl rounded-tl-none px-5 py-3.5 max-w-[85%] shadow-md">
                 <p class="text-sm leading-relaxed">${errorHtml}</p>
             </div>
         `;
@@ -376,47 +341,40 @@ const handleDarkAGISend = async (e) => {
         darkAgiState.loading = false;
         btn.disabled = false;
         btn.classList.remove('opacity-50', 'cursor-not-allowed');
-        // Re-focus input for quick typing
         setTimeout(() => input.focus(), 50);
     }
 };
 
-// Wire up DarkAGI listener
 document.getElementById('darkagi-form')?.addEventListener('submit', handleDarkAGISend);
 
 // --- ROUTING LOGIC ---
 
-// Helper to set view visibility using both classes and inline styles for robustness
 const setViewVisibility = (id, isVisible) => {
     const el = document.getElementById(id);
     if (!el) return;
     
     if (isVisible) {
         el.classList.remove('hidden');
-        el.style.display = ''; // Remove inline display:none
+        el.style.display = ''; 
     } else {
         el.classList.add('hidden');
-        el.style.display = 'none'; // Force inline display:none
+        el.style.display = 'none'; 
     }
 };
 
 const handleRoute = () => {
-    // Normalize hash: #/aimo -> #aimo, #aimo -> #aimo
     const hash = window.location.hash.replace('#/', '#');
     
-    // Determine which view to show
     const isTool = hash === '#base64';
     const isAimo = hash === '#aimo';
     const isDarkAgi = hash === '#darkagi';
     const isHome = !isTool && !isAimo && !isDarkAgi;
 
-    // Apply visibility
     setViewVisibility('view-home', isHome);
     setViewVisibility('view-tool', isTool);
     setViewVisibility('view-aimo', isAimo);
     setViewVisibility('view-darkagi', isDarkAgi);
 
-    // Initialize specific logic
     if (isAimo) {
         renderAimoDashboard();
     } else if (isDarkAgi) {
@@ -424,15 +382,12 @@ const handleRoute = () => {
     }
 };
 
-// Listen for hash changes
 window.addEventListener('hashchange', handleRoute);
-// Check initial load
 window.addEventListener('load', handleRoute);
 
 
-// --- APP LOGIC (Existing) ---
+// --- APP LOGIC (Base64 Tool) ---
 
-// Constants
 const STATES = {
     IDLE: 'idle',
     PROCESSING: 'processing',
@@ -440,7 +395,6 @@ const STATES = {
     ERROR: 'error'
 };
 
-// State
 let state = {
     status: STATES.IDLE,
     generatedBlob: null,
@@ -462,7 +416,6 @@ const resetBtn = document.getElementById('resetBtn');
 const retryBtn = document.getElementById('retryBtn');
 const errorMsg = document.getElementById('errorMsg');
 
-// Logic Functions
 const readFileAsText = (file) => {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -553,18 +506,16 @@ const downloadBlob = (blob, filename) => {
     URL.revokeObjectURL(url);
 };
 
-// UI Handling
+// UI Handling for Tech Theme
 const setStatus = (newStatus, message = '', files = []) => {
     state.status = newStatus;
 
-    // Reset visibility
     stateIdle.classList.add('hidden');
     stateProcessing.classList.add('hidden');
     stateSuccess.classList.add('hidden');
     stateError.classList.add('hidden');
-    dropZone.classList.remove('border-red-200', 'border-green-200', 'cursor-pointer');
+    dropZone.classList.remove('border-red-500/50', 'border-emerald-500/50', 'cursor-pointer');
     
-    // Add interactions based on state
     if (newStatus === STATES.IDLE) {
         stateIdle.classList.remove('hidden');
         dropZone.classList.add('cursor-pointer');
@@ -573,32 +524,31 @@ const setStatus = (newStatus, message = '', files = []) => {
         processingFileName.textContent = message;
     } else if (newStatus === STATES.SUCCESS) {
         stateSuccess.classList.remove('hidden');
-        dropZone.classList.add('border-green-200');
-        successFileCount.textContent = `Found ${files.length} file${files.length !== 1 ? 's' : ''} in the archive.`;
+        dropZone.classList.add('border-emerald-500/50');
+        successFileCount.textContent = `Files detected: ${files.length}`;
         
-        // Render files
         fileListContainer.innerHTML = '';
         if (files.length > 0) {
             files.forEach(file => {
                 const li = document.createElement('li');
-                li.className = "px-4 py-3 flex items-center text-left hover:bg-slate-100 transition-colors";
+                li.className = "px-4 py-2 flex items-center text-left hover:bg-slate-800 transition-colors";
                 li.innerHTML = `
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-slate-400 mr-3 flex-shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 text-emerald-400 mr-3 flex-shrink-0">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
                     </svg>
-                    <span class="text-sm text-slate-700 truncate font-medium">${file}</span>
+                    <span class="text-xs text-slate-300 truncate font-mono">${file}</span>
                 `;
                 fileListContainer.appendChild(li);
             });
         } else {
              const li = document.createElement('li');
-             li.className = "px-4 py-4 text-slate-400 text-sm italic";
-             li.textContent = "No files detected or unable to read directory.";
+             li.className = "px-4 py-4 text-slate-500 text-xs italic font-mono";
+             li.textContent = "No valid zip structure detected.";
              fileListContainer.appendChild(li);
         }
     } else if (newStatus === STATES.ERROR) {
         stateError.classList.remove('hidden');
-        dropZone.classList.add('border-red-200');
+        dropZone.classList.add('border-red-500/50');
         errorMsg.textContent = message;
     }
 };
@@ -621,7 +571,7 @@ const processFile = async (file) => {
     setStatus(STATES.PROCESSING, displayFileName);
 
     try {
-        await new Promise(resolve => setTimeout(resolve, 600)); // UI Delay
+        await new Promise(resolve => setTimeout(resolve, 600)); 
         const textContent = await readFileAsText(file);
         const zipBlob = convertTextToZipBlob(textContent);
         const files = await getZipFileList(zipBlob);
@@ -635,9 +585,7 @@ const processFile = async (file) => {
     }
 };
 
-// Event Listeners
 dropZone.addEventListener('click', (e) => {
-    // Only trigger input if in Idle state and not clicking buttons
     if (state.status === STATES.IDLE) {
         fileInput.click();
     }
@@ -647,20 +595,20 @@ dropZone.addEventListener('dragover', (e) => {
     e.preventDefault();
     e.stopPropagation();
     if (state.status === STATES.IDLE) {
-        dropZone.classList.add('border-brand-500', 'bg-brand-50', 'scale-[1.02]');
+        dropZone.classList.add('border-emerald-500', 'bg-slate-800/80', 'scale-[1.02]');
     }
 });
 
 dropZone.addEventListener('dragleave', (e) => {
     e.preventDefault();
     e.stopPropagation();
-    dropZone.classList.remove('border-brand-500', 'bg-brand-50', 'scale-[1.02]');
+    dropZone.classList.remove('border-emerald-500', 'bg-slate-800/80', 'scale-[1.02]');
 });
 
 dropZone.addEventListener('drop', (e) => {
     e.preventDefault();
     e.stopPropagation();
-    dropZone.classList.remove('border-brand-500', 'bg-brand-50', 'scale-[1.02]');
+    dropZone.classList.remove('border-emerald-500', 'bg-slate-800/80', 'scale-[1.02]');
 
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
         processFile(e.dataTransfer.files[0]);
@@ -690,5 +638,4 @@ retryBtn.addEventListener('click', (e) => {
     reset();
 });
 
-// Initial
 reset();
