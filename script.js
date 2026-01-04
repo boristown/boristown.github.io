@@ -154,7 +154,6 @@ const renderAimoDashboard = () => {
 
 // --- DARKAGI LOGIC ---
 
-const DARKAGI_API_KEY = "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";
 let darkAgiState = {
     initialized: false,
     history: [],
@@ -248,11 +247,18 @@ const handleDarkAGISend = async (e) => {
 
     const input = document.getElementById('darkagi-input');
     const select = document.getElementById('darkagi-model-select');
+    const keyInput = document.getElementById('darkagi-api-key');
     const btn = document.getElementById('darkagi-send-btn');
     const message = input.value.trim();
     const model = select.value;
+    const apiKey = keyInput ? keyInput.value.trim() : '';
 
     if (!message || !model) return;
+    
+    if (!apiKey) {
+        alert("Please enter a valid API Key.");
+        return;
+    }
 
     // UI Updates
     input.value = '';
@@ -283,7 +289,7 @@ const handleDarkAGISend = async (e) => {
         const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
             method: "POST",
             headers: {
-                "Authorization": `Bearer ${DARKAGI_API_KEY}`,
+                "Authorization": `Bearer ${apiKey}`,
                 "Content-Type": "application/json",
                 // Valid generic referer to bypass browser quirks
                 "HTTP-Referer": "https://github.com/boristown/DarkAGI", 
@@ -330,9 +336,9 @@ const handleDarkAGISend = async (e) => {
             <span class="font-mono text-xs text-red-300 mt-1 block bg-black/20 p-2 rounded">${err.message}</span>
             <span class="text-xs text-slate-500 mt-2 block">
                 Troubleshooting:<br>
-                1. Check if the model selected is actually available (some free models have downtime).<br>
-                2. Check if the API key is valid.<br>
-                3. Check your internet connection.
+                1. <strong>Invalid API Key</strong>. The default key provided is invalid ("User not found").<br>
+                2. Please enter your own OpenRouter API key in the input field above.<br>
+                3. Ensure the model selected is available.
             </span>
         `;
         
@@ -344,6 +350,14 @@ const handleDarkAGISend = async (e) => {
             </div>
         `;
         container.appendChild(div);
+        
+        // Highlight Key Input
+        if (keyInput) {
+            keyInput.classList.add('border-red-500', 'ring-1', 'ring-red-500');
+            setTimeout(() => {
+                keyInput.classList.remove('border-red-500', 'ring-1', 'ring-red-500');
+            }, 2000);
+        }
         
     } finally {
         darkAgiState.loading = false;
