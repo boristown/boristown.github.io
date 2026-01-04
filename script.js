@@ -232,7 +232,7 @@ const appendDarkAGIMessage = (role, text) => {
         <div class="${role === 'user' 
             ? 'bg-violet-600 text-white rounded-2xl rounded-tr-none' 
             : 'bg-slate-800 text-slate-200 rounded-2xl rounded-tl-none border border-slate-700 shadow-md'} px-5 py-3.5 max-w-[85%]">
-            <p class="text-sm leading-relaxed whitespace-pre-wrap">${text}</p>
+            <p class="text-sm leading-relaxed whitespace-pre-wrap">${contentHtml}</p>
         </div>
     `;
     
@@ -285,8 +285,9 @@ const handleDarkAGISend = async (e) => {
             headers: {
                 "Authorization": `Bearer ${DARKAGI_API_KEY}`,
                 "Content-Type": "application/json",
-                "HTTP-Referer": window.location.href, // Required for Free Tier
-                "X-Title": "BorisTown Toolkits"      // Required for Free Tier
+                // Valid generic referer to bypass browser quirks
+                "HTTP-Referer": "https://github.com/boristown/DarkAGI", 
+                "X-Title": "BorisTown Toolkits"
             },
             body: JSON.stringify({
                 "model": model,
@@ -295,9 +296,21 @@ const handleDarkAGISend = async (e) => {
         });
 
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            const errorMessage = errorData.error?.message || `Status Code: ${response.status}`;
-            throw new Error(errorMessage);
+            const errorText = await response.text();
+            let errorMsg = `API Error ${response.status}`;
+            
+            // Try parsing JSON error
+            try {
+                const errorJson = JSON.parse(errorText);
+                if (errorJson.error) {
+                    // OpenRouter format: { error: { message: "...", ... } }
+                    errorMsg = errorJson.error.message || JSON.stringify(errorJson.error);
+                }
+            } catch (parseErr) {
+                // If text parsing fails, use the raw text (truncated)
+                errorMsg = errorText.substring(0, 200);
+            }
+            throw new Error(errorMsg);
         }
 
         const data = await response.json();
@@ -313,8 +326,14 @@ const handleDarkAGISend = async (e) => {
         
         // Show clearer error message to user
         const errorHtml = `
-            <span class="text-red-400 font-bold">Connection Error:</span> ${err.message}<br>
-            <span class="text-xs text-slate-500 mt-2 block">Tip: Check if the model is currently available or if the API key is valid.</span>
+            <span class="text-red-400 font-bold">API Connection Failed:</span><br>
+            <span class="font-mono text-xs text-red-300 mt-1 block bg-black/20 p-2 rounded">${err.message}</span>
+            <span class="text-xs text-slate-500 mt-2 block">
+                Troubleshooting:<br>
+                1. Check if the model selected is actually available (some free models have downtime).<br>
+                2. Check if the API key is valid.<br>
+                3. Check your internet connection.
+            </span>
         `;
         
         const div = document.createElement('div');
