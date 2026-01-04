@@ -158,29 +158,48 @@ let darkAgiState = {
     loading: false
 };
 
-const populateModelSelect = (models) => {
-    const select = document.getElementById('darkagi-model-select');
-    if (!select) return;
+// Select a random model WITH animation (Promise-based)
+// Returns the selected Model ID
+const selectRandomModelWithAnimation = async () => {
+    const display = document.getElementById('darkagi-model-display');
+    const models = darkAgiState.models;
     
-    select.innerHTML = '';
-    models.sort((a, b) => (a.name || a.id).localeCompare(b.name || b.id));
+    if (!display || !models || models.length === 0) return null;
 
-    models.forEach(m => {
-        const opt = document.createElement('option');
-        opt.value = m.id;
-        opt.textContent = m.name || m.id;
-        select.appendChild(opt);
-    });
+    // Animation Config
+    const duration = 800; // total run time in ms (faster for per-message)
+    const intervalTime = 50; // speed of change
     
-    // Updated preference logic: Prefer 'thinking' model first to avoid Flash 429 errors
-    const preferred = models.find(m => m.id.includes('gemini') && m.id.includes('thinking')) || 
-                      models.find(m => m.id.includes('gemini') && m.id.includes('flash'));
-                      
-    if (preferred) {
-        select.value = preferred.id;
-    } else if (models.length > 0) {
-        select.selectedIndex = 0;
-    }
+    display.classList.remove("text-cyan-400", "glitch-text");
+    display.classList.add("text-slate-500");
+    
+    return new Promise((resolve) => {
+        let elapsed = 0;
+        const intervalId = setInterval(() => {
+            // Randomly pick a model for visual effect
+            const randomModel = models[Math.floor(Math.random() * models.length)];
+            const name = (randomModel.name || randomModel.id).replace(':free', '');
+            display.innerText = `SCANNING [${name}]...`;
+            
+            elapsed += intervalTime;
+            
+            if (elapsed > duration) {
+                clearInterval(intervalId);
+                
+                // Final Selection
+                const final = models[Math.floor(Math.random() * models.length)];
+                const finalName = (final.name || final.id).replace(':free', '');
+                
+                display.innerText = finalName;
+                
+                // Visual Pop
+                display.classList.remove("text-slate-500");
+                display.classList.add("text-cyan-400", "glitch-text");
+                
+                resolve(final.id);
+            }
+        }, intervalTime);
+    });
 };
 
 const resetDarkAGIChat = () => {
@@ -195,22 +214,27 @@ const resetDarkAGIChat = () => {
                 <div class="bg-slate-800/80 backdrop-blur text-slate-300 rounded-2xl rounded-tl-none px-6 py-4 max-w-[85%] border border-slate-700 shadow-xl">
                     <p class="text-sm leading-relaxed font-mono">
                         <span class="text-indigo-400">SYS>></span> Session Reset.<br>
-                        <span class="text-indigo-400">SYS>></span> Ready for new input.<br><br>
+                        <span class="text-indigo-400">SYS>></span> Grid Mode: Random Allocation.<br><br>
                         Awaiting command.
                     </p>
                 </div>
             </div>
         `;
     }
+    
+    // Visual reset only
+    const display = document.getElementById('darkagi-model-display');
+    if(display) {
+        display.innerText = "STANDBY";
+        display.classList.remove("text-cyan-400", "glitch-text");
+        display.classList.add("text-slate-500");
+    }
 };
 
 const initDarkAGI = async () => {
     if (darkAgiState.initialized) return;
 
-    const select = document.getElementById('darkagi-model-select');
     const status = document.getElementById('darkagi-status');
-    const inputField = document.getElementById('darkagi-input');
-    const sendBtn = document.getElementById('darkagi-send-btn');
 
     try {
         // 1. Validate Key State
@@ -246,16 +270,18 @@ const initDarkAGI = async () => {
         }
         
         darkAgiState.models = freeModels;
-        populateModelSelect(freeModels);
+        
+        // Initial visual check
+        const display = document.getElementById('darkagi-model-display');
+        if(display) {
+             display.innerText = `GRID ONLINE (${freeModels.length} NODES)`;
+             display.classList.add("text-emerald-500");
+        }
         
         if (status) {
             status.textContent = "SYSTEM ONLINE";
             status.className = "text-green-500 font-mono font-bold";
         }
-        
-        // Enable inputs
-        if(inputField) inputField.disabled = false;
-        if(sendBtn) sendBtn.disabled = false;
 
     } catch (err) {
         console.warn("DarkAGI Init Failed.", err);
@@ -266,7 +292,8 @@ const initDarkAGI = async () => {
                 status.textContent = "ACCESS DENIED (KEY INVALID)";
                 status.className = "text-red-500 font-mono font-bold";
             }
-            // Disable inputs
+            const inputField = document.getElementById('darkagi-input');
+            const sendBtn = document.getElementById('darkagi-send-btn');
             if(inputField) {
                 inputField.disabled = true;
                 inputField.placeholder = "System Locked: Invalid API Key";
@@ -277,7 +304,8 @@ const initDarkAGI = async () => {
 
         // Regular Fallback for model list failure
         darkAgiState.models = FALLBACK_MODELS;
-        populateModelSelect(FALLBACK_MODELS);
+        const display = document.getElementById('darkagi-model-display');
+        if(display) display.innerText = "LOCAL FALLBACK";
 
         if (status) {
             status.textContent = "OFFLINE (LOCAL MODE)";
@@ -314,21 +342,28 @@ const appendDarkAGIMessage = (role, text) => {
 };
 
 // Extracted Core Logic for reuse (Retry)
-const executeAIRequest = async (modelOverride = null) => {
+const executeAIRequest = async () => {
     if (darkAgiState.loading) return;
 
-    const select = document.getElementById('darkagi-model-select');
     const btn = document.getElementById('darkagi-send-btn');
     const container = document.getElementById('darkagi-chat-container');
     
-    const model = modelOverride || select.value;
-    
-    if (!model) return;
-
     darkAgiState.loading = true;
     if(btn) {
         btn.disabled = true;
         btn.classList.add('opacity-50', 'cursor-not-allowed');
+    }
+
+    // 1. Select a new random model for this specific request
+    // This distributes load and avoids 429s on specific models
+    let model = null;
+    if (darkAgiState.models && darkAgiState.models.length > 0) {
+        model = await selectRandomModelWithAnimation();
+    }
+    
+    if (!model) {
+        // Fallback safety
+        model = "google/gemini-2.0-flash-exp:free"; 
     }
 
     // Add Loading Indicator
@@ -452,7 +487,7 @@ window.retryDarkAGI = (elementId) => {
     const el = document.getElementById(elementId);
     if(el) el.remove();
     
-    // Trigger request again
+    // Trigger request again (will re-roll model automatically)
     executeAIRequest();
 };
 
@@ -470,7 +505,7 @@ const handleDarkAGISend = async (e) => {
     input.style.height = 'auto'; 
     appendDarkAGIMessage('user', message);
     
-    // Call Core Logic
+    // Call Core Logic (Model selection happens inside)
     executeAIRequest();
 };
 
