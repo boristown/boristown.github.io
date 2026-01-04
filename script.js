@@ -345,6 +345,11 @@ const handleDarkAGISend = async (e) => {
     container.appendChild(loadingDiv);
     container.scrollTop = container.scrollHeight;
 
+    const requestBody = {
+        "model": model,
+        "messages": darkAgiState.history
+    };
+
     try {
         const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
             method: "POST",
@@ -354,24 +359,17 @@ const handleDarkAGISend = async (e) => {
                 "HTTP-Referer": "https://github.com/boristown/DarkAGI", 
                 "X-Title": "BorisTown Toolkits"
             },
-            body: JSON.stringify({
-                "model": model,
-                "messages": darkAgiState.history
-            })
+            body: JSON.stringify(requestBody)
         });
 
         if (!response.ok) {
             const errorText = await response.text();
-            let errorMsg = `API Error ${response.status}`;
-            try {
-                const errorJson = JSON.parse(errorText);
-                if (errorJson.error) {
-                    errorMsg = errorJson.error.message || JSON.stringify(errorJson.error);
-                }
-            } catch (parseErr) {
-                errorMsg = errorText.substring(0, 200);
-            }
-            throw new Error(errorMsg);
+            throw {
+                status: response.status,
+                statusText: response.statusText,
+                responseText: errorText,
+                requestBody: requestBody
+            };
         }
 
         const data = await response.json();
@@ -384,16 +382,48 @@ const handleDarkAGISend = async (e) => {
         console.error(err);
         loadingDiv.remove();
         
-        const errorHtml = `
-            <span class="text-red-400 font-bold font-mono">CONNECTION FAILURE:</span><br>
-            <span class="font-mono text-xs text-red-300 mt-1 block bg-black/20 p-2 rounded border border-red-500/20">${err.message}</span>
-        `;
+        let errorMessage = "Unknown Error";
+        let detailedDebug = "";
+
+        // Check if it's our custom error object containing response info
+        if (err.responseText !== undefined) {
+             try {
+                const jsonError = JSON.parse(err.responseText);
+                // OpenRouter often puts message inside error: { message: ... }
+                errorMessage = jsonError.error?.message || jsonError.message || `API Error ${err.status}`;
+            } catch (e) {
+                // If response text isn't JSON
+                errorMessage = `API Error ${err.status}: ${err.responseText.substring(0, 50)}...`;
+            }
+
+            // Create detailed debug view
+            detailedDebug = `
+                <div class="mt-2 space-y-2">
+                    <details>
+                        <summary class="cursor-pointer text-indigo-400 hover:text-indigo-300 text-[10px] outline-none select-none">▶ VIEW REQUEST PAYLOAD</summary>
+                        <pre class="mt-1 p-2 bg-slate-950 rounded text-[10px] overflow-x-auto whitespace-pre-wrap text-slate-400 border border-slate-800">${JSON.stringify(err.requestBody, null, 2)}</pre>
+                    </details>
+                    <details open>
+                        <summary class="cursor-pointer text-red-400 hover:text-red-300 text-[10px] outline-none select-none">▶ VIEW FULL RESPONSE</summary>
+                        <pre class="mt-1 p-2 bg-slate-950 rounded text-[10px] overflow-x-auto whitespace-pre-wrap text-red-300 border border-red-900/30">${err.responseText}</pre>
+                    </details>
+                </div>
+            `;
+        } else {
+            // Standard network or code error
+            errorMessage = err.message || "Network/Client Error";
+            detailedDebug = `<span class="text-slate-600 text-[10px] italic">${err.stack || ''}</span>`;
+        }
         
         const div = document.createElement('div');
         div.className = "flex justify-start w-full";
         div.innerHTML = `
-            <div class="bg-slate-900 border border-red-900 rounded-2xl rounded-tl-none px-5 py-3.5 max-w-[85%] shadow-md">
-                <p class="text-sm leading-relaxed">${errorHtml}</p>
+            <div class="bg-slate-900 border border-red-900 rounded-2xl rounded-tl-none px-5 py-3.5 max-w-[95%] shadow-md break-all">
+                <span class="text-red-400 font-bold font-mono text-xs">CONNECTION FAILURE</span>
+                <div class="font-mono text-xs text-red-200 mt-2 mb-2 p-2 bg-red-950/30 rounded border border-red-500/10">
+                    ${errorMessage}
+                </div>
+                ${detailedDebug}
             </div>
         `;
         container.appendChild(div);
