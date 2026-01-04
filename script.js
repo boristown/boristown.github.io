@@ -152,10 +152,162 @@ const renderAimoDashboard = () => {
     fetchLeaderboardData();
 };
 
+// --- DARKAGI LOGIC ---
+
+const DARKAGI_API_KEY = "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";
+let darkAgiState = {
+    initialized: false,
+    history: [],
+    models: [],
+    loading: false
+};
+
+const initDarkAGI = async () => {
+    if (darkAgiState.initialized) return;
+
+    const select = document.getElementById('darkagi-model-select');
+    const status = document.getElementById('darkagi-status');
+
+    try {
+        status.textContent = "Fetching models...";
+        const response = await fetch('https://openrouter.ai/api/v1/models');
+        const data = await response.json();
+        
+        // Filter for free models
+        const freeModels = data.data.filter(m => m.id.endsWith(':free') || m.pricing.prompt === "0");
+        
+        // Populate select
+        select.innerHTML = '';
+        if (freeModels.length > 0) {
+            freeModels.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m.id;
+                opt.textContent = m.name || m.id;
+                select.appendChild(opt);
+            });
+            // Try to set a good default
+            const gemini = freeModels.find(m => m.id.includes('gemini'));
+            if (gemini) select.value = gemini.id;
+        } else {
+            const opt = document.createElement('option');
+            opt.textContent = "No free models found";
+            select.appendChild(opt);
+        }
+        
+        darkAgiState.models = freeModels;
+        darkAgiState.initialized = true;
+        status.textContent = "Online";
+        status.className = "text-green-500 font-bold";
+
+    } catch (err) {
+        console.error("Failed to init DarkAGI", err);
+        status.textContent = "Connection Error";
+        status.className = "text-red-500 font-bold";
+        select.innerHTML = '<option>Error loading models</option>';
+    }
+};
+
+const appendDarkAGIMessage = (role, text) => {
+    const container = document.getElementById('darkagi-chat-container');
+    const div = document.createElement('div');
+    div.className = "flex w-full " + (role === 'user' ? "justify-end" : "justify-start");
+    
+    let contentHtml = text.replace(/\n/g, '<br>');
+    
+    div.innerHTML = `
+        <div class="${role === 'user' 
+            ? 'bg-violet-600 text-white rounded-2xl rounded-tr-none' 
+            : 'bg-slate-800 text-slate-200 rounded-2xl rounded-tl-none border border-slate-700 shadow-md'} px-5 py-3.5 max-w-[85%]">
+            <p class="text-sm leading-relaxed">${contentHtml}</p>
+        </div>
+    `;
+    
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+    
+    darkAgiState.history.push({ role, content: text });
+};
+
+const handleDarkAGISend = async (e) => {
+    e.preventDefault();
+    if (darkAgiState.loading) return;
+
+    const input = document.getElementById('darkagi-input');
+    const select = document.getElementById('darkagi-model-select');
+    const btn = document.getElementById('darkagi-send-btn');
+    const message = input.value.trim();
+    const model = select.value;
+
+    if (!message || !model) return;
+
+    // UI Updates
+    input.value = '';
+    input.style.height = 'auto'; // Reset height
+    appendDarkAGIMessage('user', message);
+    darkAgiState.loading = true;
+    btn.disabled = true;
+    btn.classList.add('opacity-50', 'cursor-not-allowed');
+
+    // Create a placeholder for AI response with typing indicator
+    const container = document.getElementById('darkagi-chat-container');
+    const loadingDiv = document.createElement('div');
+    loadingDiv.className = "flex justify-start w-full";
+    loadingDiv.id = "darkagi-loading-indicator";
+    loadingDiv.innerHTML = `
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl rounded-tl-none px-5 py-4 shadow-md">
+            <div class="flex space-x-1.5">
+                <div class="w-2 h-2 bg-slate-500 rounded-full animate-bounce"></div>
+                <div class="w-2 h-2 bg-slate-500 rounded-full animate-bounce delay-75"></div>
+                <div class="w-2 h-2 bg-slate-500 rounded-full animate-bounce delay-150"></div>
+            </div>
+        </div>
+    `;
+    container.appendChild(loadingDiv);
+    container.scrollTop = container.scrollHeight;
+
+    try {
+        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${DARKAGI_API_KEY}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                "model": model,
+                "messages": darkAgiState.history
+            })
+        });
+
+        if (!response.ok) throw new Error("API Error");
+
+        const data = await response.json();
+        const aiText = data.choices[0]?.message?.content || "No response received.";
+
+        // Remove loading
+        loadingDiv.remove();
+        appendDarkAGIMessage('assistant', aiText);
+
+    } catch (err) {
+        console.error(err);
+        loadingDiv.remove();
+        appendDarkAGIMessage('assistant', "Error: Failed to connect to neural net. " + err.message);
+    } finally {
+        darkAgiState.loading = false;
+        btn.disabled = false;
+        btn.classList.remove('opacity-50', 'cursor-not-allowed');
+        // Re-focus input for quick typing
+        setTimeout(() => input.focus(), 50);
+    }
+};
+
+// Wire up DarkAGI listener
+document.getElementById('darkagi-form')?.addEventListener('submit', handleDarkAGISend);
+
 // --- ROUTING LOGIC ---
 const viewHome = document.getElementById('view-home');
 const viewTool = document.getElementById('view-tool');
 const viewAimo = document.getElementById('view-aimo');
+const viewDarkAgi = document.getElementById('view-darkagi');
 
 const handleRoute = () => {
     // Normalize hash: #/aimo -> #aimo, #aimo -> #aimo
@@ -165,6 +317,7 @@ const handleRoute = () => {
     viewHome.classList.add('hidden');
     viewTool.classList.add('hidden');
     viewAimo.classList.add('hidden');
+    viewDarkAgi.classList.add('hidden');
 
     // Simple Router
     if (hash === '#base64') {
@@ -172,6 +325,9 @@ const handleRoute = () => {
     } else if (hash === '#aimo') {
         viewAimo.classList.remove('hidden');
         renderAimoDashboard();
+    } else if (hash === '#darkagi') {
+        viewDarkAgi.classList.remove('hidden');
+        initDarkAGI();
     } else {
         // Default to Home
         viewHome.classList.remove('hidden');
