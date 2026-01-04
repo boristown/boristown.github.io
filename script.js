@@ -172,7 +172,10 @@ const populateModelSelect = (models) => {
         select.appendChild(opt);
     });
     
-    const preferred = models.find(m => m.id.includes('gemini') && m.id.includes('flash'));
+    // Updated preference logic: Prefer 'thinking' model first to avoid Flash 429 errors
+    const preferred = models.find(m => m.id.includes('gemini') && m.id.includes('thinking')) || 
+                      models.find(m => m.id.includes('gemini') && m.id.includes('flash'));
+                      
     if (preferred) {
         select.value = preferred.id;
     } else if (models.length > 0) {
@@ -310,26 +313,25 @@ const appendDarkAGIMessage = (role, text) => {
     darkAgiState.history.push({ role, content: text });
 };
 
-const handleDarkAGISend = async (e) => {
-    e.preventDefault();
+// Extracted Core Logic for reuse (Retry)
+const executeAIRequest = async (modelOverride = null) => {
     if (darkAgiState.loading) return;
 
-    const input = document.getElementById('darkagi-input');
     const select = document.getElementById('darkagi-model-select');
     const btn = document.getElementById('darkagi-send-btn');
-    const message = input.value.trim();
-    const model = select.value;
-
-    if (!message || !model) return;
-
-    input.value = '';
-    input.style.height = 'auto'; 
-    appendDarkAGIMessage('user', message);
-    darkAgiState.loading = true;
-    btn.disabled = true;
-    btn.classList.add('opacity-50', 'cursor-not-allowed');
-
     const container = document.getElementById('darkagi-chat-container');
+    
+    const model = modelOverride || select.value;
+    
+    if (!model) return;
+
+    darkAgiState.loading = true;
+    if(btn) {
+        btn.disabled = true;
+        btn.classList.add('opacity-50', 'cursor-not-allowed');
+    }
+
+    // Add Loading Indicator
     const loadingDiv = document.createElement('div');
     loadingDiv.className = "flex justify-start w-full";
     loadingDiv.id = "darkagi-loading-indicator";
@@ -389,10 +391,8 @@ const handleDarkAGISend = async (e) => {
         if (err.responseText !== undefined) {
              try {
                 const jsonError = JSON.parse(err.responseText);
-                // OpenRouter often puts message inside error: { message: ... }
                 errorMessage = jsonError.error?.message || jsonError.message || `API Error ${err.status}`;
             } catch (e) {
-                // If response text isn't JSON
                 errorMessage = `API Error ${err.status}: ${err.responseText.substring(0, 50)}...`;
             }
 
@@ -410,17 +410,24 @@ const handleDarkAGISend = async (e) => {
                 </div>
             `;
         } else {
-            // Standard network or code error
             errorMessage = err.message || "Network/Client Error";
             detailedDebug = `<span class="text-slate-600 text-[10px] italic">${err.stack || ''}</span>`;
         }
         
+        const errorId = `error-${Date.now()}`;
+        
         const div = document.createElement('div');
         div.className = "flex justify-start w-full";
+        div.id = errorId;
         div.innerHTML = `
             <div class="bg-slate-900 border border-red-900 rounded-2xl rounded-tl-none px-5 py-3.5 max-w-[95%] shadow-md break-all">
-                <span class="text-red-400 font-bold font-mono text-xs">CONNECTION FAILURE</span>
-                <div class="font-mono text-xs text-red-200 mt-2 mb-2 p-2 bg-red-950/30 rounded border border-red-500/10">
+                <div class="flex justify-between items-start mb-2">
+                    <span class="text-red-400 font-bold font-mono text-xs">CONNECTION FAILURE</span>
+                    <button onclick="window.retryDarkAGI('${errorId}')" class="text-[10px] bg-red-900/50 hover:bg-red-800 text-white px-2 py-1 rounded border border-red-700 transition-colors uppercase font-mono tracking-wider">
+                        Retry ⟳
+                    </button>
+                </div>
+                <div class="font-mono text-xs text-red-200 mb-2 p-2 bg-red-950/30 rounded border border-red-500/10">
                     ${errorMessage}
                 </div>
                 ${detailedDebug}
@@ -430,10 +437,41 @@ const handleDarkAGISend = async (e) => {
         
     } finally {
         darkAgiState.loading = false;
-        btn.disabled = false;
-        btn.classList.remove('opacity-50', 'cursor-not-allowed');
-        setTimeout(() => input.focus(), 50);
+        if(btn) {
+            btn.disabled = false;
+            btn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+        const input = document.getElementById('darkagi-input');
+        if(input) setTimeout(() => input.focus(), 50);
     }
+};
+
+// Retry handler exposed globally
+window.retryDarkAGI = (elementId) => {
+    // Remove the error message UI
+    const el = document.getElementById(elementId);
+    if(el) el.remove();
+    
+    // Trigger request again
+    executeAIRequest();
+};
+
+const handleDarkAGISend = async (e) => {
+    e.preventDefault();
+    if (darkAgiState.loading) return;
+
+    const input = document.getElementById('darkagi-input');
+    const message = input.value.trim();
+
+    if (!message) return;
+
+    // UI Updates
+    input.value = '';
+    input.style.height = 'auto'; 
+    appendDarkAGIMessage('user', message);
+    
+    // Call Core Logic
+    executeAIRequest();
 };
 
 document.getElementById('darkagi-form')?.addEventListener('submit', handleDarkAGISend);
