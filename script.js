@@ -141,7 +141,7 @@ const renderAimoDashboard = () => {
 // --- DARKAGI LOGIC ---
 
 // Provided key by user - VERIFIED
-const DARKAGI_API_KEY = "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";
+const DARKAGI_API_KEY = "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";
 
 // Hardcoded fallback models
 const FALLBACK_MODELS = [
@@ -180,18 +180,58 @@ const populateModelSelect = (models) => {
     }
 };
 
+const resetDarkAGIChat = () => {
+    // 1. Reset history state
+    darkAgiState.history = [];
+    
+    // 2. Clear DOM
+    const container = document.getElementById('darkagi-chat-container');
+    if (container) {
+        container.innerHTML = `
+            <div class="flex justify-start">
+                <div class="bg-slate-800/80 backdrop-blur text-slate-300 rounded-2xl rounded-tl-none px-6 py-4 max-w-[85%] border border-slate-700 shadow-xl">
+                    <p class="text-sm leading-relaxed font-mono">
+                        <span class="text-indigo-400">SYS>></span> Session Reset.<br>
+                        <span class="text-indigo-400">SYS>></span> Ready for new input.<br><br>
+                        Awaiting command.
+                    </p>
+                </div>
+            </div>
+        `;
+    }
+};
+
 const initDarkAGI = async () => {
     if (darkAgiState.initialized) return;
 
     const select = document.getElementById('darkagi-model-select');
     const status = document.getElementById('darkagi-status');
+    const inputField = document.getElementById('darkagi-input');
+    const sendBtn = document.getElementById('darkagi-send-btn');
 
     try {
+        // 1. Validate Key State
         if (status) {
-            status.textContent = "UPLINKING...";
+            status.textContent = "VERIFYING KEY...";
             status.className = "text-yellow-500 font-mono animate-pulse";
         }
+
+        // Check key validity with OpenRouter auth endpoint
+        const authResponse = await fetch('https://openrouter.ai/api/v1/auth/key', {
+             headers: {
+                "Authorization": `Bearer ${DARKAGI_API_KEY}`
+            }
+        });
+
+        if (!authResponse.ok) {
+            throw new Error("Invalid API Key");
+        }
         
+        // 2. Fetch Models
+        if (status) {
+            status.textContent = "FETCHING MODELS...";
+        }
+
         const response = await fetch('https://openrouter.ai/api/v1/models');
         if (!response.ok) throw new Error("Failed to fetch models");
         
@@ -206,17 +246,38 @@ const initDarkAGI = async () => {
         populateModelSelect(freeModels);
         
         if (status) {
-            status.textContent = "ONLINE";
+            status.textContent = "SYSTEM ONLINE";
             status.className = "text-green-500 font-mono font-bold";
         }
+        
+        // Enable inputs
+        if(inputField) inputField.disabled = false;
+        if(sendBtn) sendBtn.disabled = false;
 
     } catch (err) {
-        console.warn("DarkAGI Model Fetch Failed, using fallback list.", err);
+        console.warn("DarkAGI Init Failed.", err);
+        
+        // Fallback or Error State
+        if (err.message === "Invalid API Key") {
+             if (status) {
+                status.textContent = "ACCESS DENIED (KEY INVALID)";
+                status.className = "text-red-500 font-mono font-bold";
+            }
+            // Disable inputs
+            if(inputField) {
+                inputField.disabled = true;
+                inputField.placeholder = "System Locked: Invalid API Key";
+            }
+            if(sendBtn) sendBtn.disabled = true;
+            return; // Stop here
+        }
+
+        // Regular Fallback for model list failure
         darkAgiState.models = FALLBACK_MODELS;
         populateModelSelect(FALLBACK_MODELS);
 
         if (status) {
-            status.textContent = "OFFLINE (LOCAL)";
+            status.textContent = "OFFLINE (LOCAL MODE)";
             status.className = "text-orange-500 font-mono font-bold";
         }
     } finally {
@@ -346,6 +407,11 @@ const handleDarkAGISend = async (e) => {
 };
 
 document.getElementById('darkagi-form')?.addEventListener('submit', handleDarkAGISend);
+// Listen for New Chat button click
+document.getElementById('darkagi-new-chat-btn')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    resetDarkAGIChat();
+});
 
 // --- ROUTING LOGIC ---
 
