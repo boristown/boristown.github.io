@@ -811,6 +811,13 @@ const handleRoute = () => {
     setViewVisibility('view-aimo', isAimo);
     setViewVisibility('view-darkagi', isDarkAgi);
 
+    // Toggle Global Elements
+    const globalHeader = document.getElementById('global-header');
+    const globalFooter = document.getElementById('global-footer');
+    
+    if (globalHeader) globalHeader.style.display = isDarkAgi ? 'none' : '';
+    if (globalFooter) globalFooter.style.display = isDarkAgi ? 'none' : '';
+
     if (isAimo) {
         renderAimoDashboard();
     } else if (isDarkAgi) {
