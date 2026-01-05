@@ -157,9 +157,11 @@ const getSystemPrompt = () => {
         content: `你的名字叫做暗黑AGI，英文名DarkAGI。请使用中文与用户对话。
 当前时间：${dateStr} ${timeStr}
 
-你拥有联网能力和代码执行能力。
+你拥有联网能力和 Python 代码执行沙箱。
 
-当遇到你不知道的信息、最近发生的新闻、需要具体网页内容，或者需要进行精确计算、复杂逻辑处理时，请严格按照以下格式输出指令：
+当需要进行精确数学计算、数据处理、算法验证或获取不到信息时，请使用工具。
+
+指令格式（严格遵守）：
 
 1. 搜索网络：
 [[SEARCH: 搜索关键词]]
@@ -167,16 +169,18 @@ const getSystemPrompt = () => {
 2. 阅读网页：
 [[VISIT: 网址]]
 
-3. 运行Python代码 (用于数学计算、数据处理):
+3. 运行 Python 代码：
 [[PYTHON: 代码内容]]
-* 注意：必须使用 print() 函数输出结果，否则你将看不到任何返回。
+或者直接输出 Python 代码块：
+\`\`\`python
+print("必须使用 print 函数输出结果")
+\`\`\`
 
-请注意：
-- 每次回复只输出一个指令，不要输出多余的解释。
-- 运行Python代码时，直接在 [[PYTHON: ...]] 中写入纯代码，不需要 Markdown 代码块标记（如 \`\`\`python）。
-- 等待提供工具结果后，再综合信息回答用户。
-- 如果不需要工具，直接回答用户。
-- 如果系统提示工具调用失败（例如网络错误），请告知用户服务暂不可用，**绝对不要**重复尝试相同的指令。`
+注意事项：
+- Python 代码**必须**使用 \`print()\` 将结果输出到标准输出(stdout)，否则无法获取结果。
+- 优先使用 [[PYTHON: ...]] 格式以减少 Token 消耗，但标准的 Markdown 代码块也能被识别执行。
+- 每次回复优先输出一个主要指令。
+- 遇到错误不要死循环重试，请尝试改变方法或告知用户。`
     };
 };
 
@@ -621,7 +625,12 @@ const executeAIRequest = async (recursionDepth = 0) => {
         // --- CHECK FOR TOOL CALLS via TEXT PATTERNS ---
         const searchMatch = aiText.match(/\[\[SEARCH:\s*(.+?)\]\]/);
         const visitMatch = aiText.match(/\[\[VISIT:\s*(.+?)\]\]/);
-        const pythonMatch = aiText.match(/\[\[PYTHON:\s*([\s\S]+?)\]\]/); // Multiline match for Python
+        
+        // Flexible Python matching: Custom tag OR Markdown block
+        let pythonMatch = aiText.match(/\[\[PYTHON:\s*([\s\S]+?)\]\]/); 
+        if (!pythonMatch) {
+            pythonMatch = aiText.match(/```python\s*([\s\S]+?)```/i);
+        }
 
         if (searchMatch || visitMatch || pythonMatch) {
             // Push model's request to history
