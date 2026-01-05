@@ -146,10 +146,17 @@ const getStoredKey = () => localStorage.getItem(STORAGE_KEY);
 const setStoredKey = (key) => localStorage.setItem(STORAGE_KEY, key);
 const clearStoredKey = () => localStorage.removeItem(STORAGE_KEY);
 
-// Updated System Prompt for RAG Capability
-const SYSTEM_PROMPT = {
-    role: "system",
-    content: `你的名字叫做暗黑AGI，英文名DarkAGI。请使用中文与用户对话。
+// Updated System Prompt Generator with Date/Time
+const getSystemPrompt = () => {
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('zh-CN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const timeStr = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+    
+    return {
+        role: "system",
+        content: `你的名字叫做暗黑AGI，英文名DarkAGI。请使用中文与用户对话。
+当前时间：${dateStr} ${timeStr}
+
 你拥有联网能力，可以实时搜索信息或阅读网页。
 
 当遇到你不知道的信息、最近发生的新闻或需要具体网页内容时，请严格按照以下格式输出指令：
@@ -163,7 +170,9 @@ const SYSTEM_PROMPT = {
 请注意：
 - 每次回复只输出一个指令，不要输出多余的解释。
 - 等待提供工具结果后，再综合信息回答用户。
-- 如果不需要工具，直接回答用户。`
+- 如果不需要工具，直接回答用户。
+- 如果系统提示工具调用失败（例如网络错误），请告知用户服务暂不可用，**绝对不要**重复尝试相同的指令。`
+    };
 };
 
 // Hardcoded fallback models - Excluded Google/Gemini
@@ -175,7 +184,7 @@ const FALLBACK_MODELS = [
 
 let darkAgiState = {
     initialized: false,
-    history: [SYSTEM_PROMPT],
+    history: [],
     models: [],
     loading: false
 };
@@ -219,7 +228,7 @@ const selectRandomModelWithAnimation = async () => {
 };
 
 const resetDarkAGIChat = () => {
-    darkAgiState.history = [SYSTEM_PROMPT];
+    darkAgiState.history = [getSystemPrompt()];
     
     const container = document.getElementById('darkagi-chat-container');
     if (container) {
@@ -251,6 +260,11 @@ const resetDarkAGIChat = () => {
 const initDarkAGI = async () => {
     const status = document.getElementById('darkagi-status');
     const key = getStoredKey();
+
+    // Initialize history with current time
+    if (darkAgiState.history.length === 0) {
+        darkAgiState.history = [getSystemPrompt()];
+    }
 
     if (!key) {
         if (status) {
@@ -396,15 +410,19 @@ const performSearch = async (query) => {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
 
-        const response = await fetch(`${TOOL_BASE_URL}/search`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ q: query, num_results: 5 }),
+        const params = new URLSearchParams({
+            q: query,
+            num_results: 5
+        });
+
+        // Use GET instead of POST to avoid CORS preflight issues and match example
+        const response = await fetch(`${TOOL_BASE_URL}/search?${params.toString()}`, {
+            method: 'GET',
             signal: controller.signal
         });
         clearTimeout(timeoutId);
 
-        if (!response.ok) throw new Error("Search API error");
+        if (!response.ok) throw new Error(`Search API error: ${response.status}`);
         const data = await response.json();
         
         if (!data.results || data.results.length === 0) return "未找到相关结果。";
@@ -426,7 +444,7 @@ const performWebFetch = async (url) => {
         });
         clearTimeout(timeoutId);
 
-        if (!response.ok) throw new Error("Fetch API error");
+        if (!response.ok) throw new Error(`Fetch API error: ${response.status}`);
         const text = await response.text();
         
         // Simple HTML cleanup to extract text content roughly
@@ -443,7 +461,7 @@ const performWebFetch = async (url) => {
         // Collapse whitespace
         cleanText = cleanText.replace(/\s+/g, ' ').trim();
         
-        // Truncate to avoid token limits (approx 2000 chars)
+        // Truncate to avoid token limits (approx 3000 chars)
         return cleanText.substring(0, 3000) + (cleanText.length > 3000 ? "\n...(内容过长已截断)" : "");
     } catch (err) {
         return `网页读取失败: ${err.message}`;
