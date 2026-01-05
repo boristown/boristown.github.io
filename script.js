@@ -146,10 +146,24 @@ const getStoredKey = () => localStorage.getItem(STORAGE_KEY);
 const setStoredKey = (key) => localStorage.setItem(STORAGE_KEY, key);
 const clearStoredKey = () => localStorage.removeItem(STORAGE_KEY);
 
-// System Prompt for DarkAGI Persona
+// Updated System Prompt for RAG Capability
 const SYSTEM_PROMPT = {
     role: "system",
-    content: "你的名字叫做暗黑AGI，英文名DarkAGI。请使用中文与用户对话。"
+    content: `你的名字叫做暗黑AGI，英文名DarkAGI。请使用中文与用户对话。
+你拥有联网能力，可以实时搜索信息或阅读网页。
+
+当遇到你不知道的信息、最近发生的新闻或需要具体网页内容时，请严格按照以下格式输出指令：
+
+1. 搜索网络：
+[[SEARCH: 搜索关键词]]
+
+2. 阅读网页：
+[[VISIT: 网址]]
+
+请注意：
+- 每次回复只输出一个指令，不要输出多余的解释。
+- 等待提供工具结果后，再综合信息回答用户。
+- 如果不需要工具，直接回答用户。`
 };
 
 // Hardcoded fallback models - Excluded Google/Gemini
@@ -167,7 +181,6 @@ let darkAgiState = {
 };
 
 // Select a random model WITH animation (Promise-based)
-// Returns the selected Model ID
 const selectRandomModelWithAnimation = async () => {
     const display = document.getElementById('darkagi-model-display');
     const models = darkAgiState.models;
@@ -175,8 +188,8 @@ const selectRandomModelWithAnimation = async () => {
     if (!display || !models || models.length === 0) return null;
 
     // Animation Config
-    const duration = 800; // total run time in ms (faster for per-message)
-    const intervalTime = 50; // speed of change
+    const duration = 800; 
+    const intervalTime = 50; 
     
     display.classList.remove("text-cyan-400", "glitch-text");
     display.classList.add("text-slate-500");
@@ -184,7 +197,6 @@ const selectRandomModelWithAnimation = async () => {
     return new Promise((resolve) => {
         let elapsed = 0;
         const intervalId = setInterval(() => {
-            // Randomly pick a model for visual effect
             const randomModel = models[Math.floor(Math.random() * models.length)];
             const name = (randomModel.name || randomModel.id).replace(':free', '');
             display.innerText = `正在扫描 [${name}]...`;
@@ -193,14 +205,10 @@ const selectRandomModelWithAnimation = async () => {
             
             if (elapsed > duration) {
                 clearInterval(intervalId);
-                
-                // Final Selection
                 const final = models[Math.floor(Math.random() * models.length)];
                 const finalName = (final.name || final.id).replace(':free', '');
                 
                 display.innerText = finalName;
-                
-                // Visual Pop
                 display.classList.remove("text-slate-500");
                 display.classList.add("text-cyan-400", "glitch-text");
                 
@@ -211,10 +219,8 @@ const selectRandomModelWithAnimation = async () => {
 };
 
 const resetDarkAGIChat = () => {
-    // 1. Reset history state - KEEP SYSTEM PROMPT
     darkAgiState.history = [SYSTEM_PROMPT];
     
-    // 2. Clear DOM
     const container = document.getElementById('darkagi-chat-container');
     if (container) {
         container.innerHTML = `
@@ -230,7 +236,6 @@ const resetDarkAGIChat = () => {
         `;
     }
     
-    // Visual reset only
     const display = document.getElementById('darkagi-model-display');
     if(display) {
         display.innerText = "待机";
@@ -238,7 +243,6 @@ const resetDarkAGIChat = () => {
         display.classList.add("text-slate-500");
     }
     
-    // Check key again logic
     if (!getStoredKey()) {
         appendDarkAGIMessage('assistant', "需要身份验证。\n\n请输入您的 OpenRouter API Key 以初始化系统。\n(密钥仅存储在本地)。");
     }
@@ -248,7 +252,6 @@ const initDarkAGI = async () => {
     const status = document.getElementById('darkagi-status');
     const key = getStoredKey();
 
-    // 1. Check for Key
     if (!key) {
         if (status) {
              status.textContent = "需要认证";
@@ -266,13 +269,11 @@ const initDarkAGI = async () => {
     if (darkAgiState.initialized) return;
 
     try {
-        // 2. Validate Key State
         if (status) {
             status.textContent = "正在验证密钥...";
             status.className = "text-yellow-500 font-mono animate-pulse";
         }
 
-        // Check key validity with OpenRouter auth endpoint
         const authResponse = await fetch('https://openrouter.ai/api/v1/auth/key', {
              headers: {
                 "Authorization": `Bearer ${key}`
@@ -283,7 +284,6 @@ const initDarkAGI = async () => {
             throw new Error("Invalid API Key");
         }
         
-        // 3. Fetch Models
         if (status) {
             status.textContent = "正在获取模型...";
         }
@@ -293,20 +293,17 @@ const initDarkAGI = async () => {
         
         const data = await response.json();
         
-        // Filter: Must be free AND NOT Google
         let freeModels = data.data.filter(m => 
             m.id.endsWith(':free') && 
             !m.id.toLowerCase().includes('google')
         );
         
         if (freeModels.length === 0) {
-            // If no free models returned (unlikely), fallback
             freeModels = FALLBACK_MODELS;
         }
         
         darkAgiState.models = freeModels;
         
-        // Initial visual check
         const display = document.getElementById('darkagi-model-display');
         if(display) {
              display.innerText = `网格在线 (${freeModels.length} 节点)`;
@@ -325,18 +322,16 @@ const initDarkAGI = async () => {
     } catch (err) {
         console.warn("DarkAGI Init Failed.", err);
         
-        // Fallback or Error State
         if (err.message === "Invalid API Key") {
              if (status) {
                 status.textContent = "访问被拒绝";
                 status.className = "text-red-500 font-mono font-bold";
             }
-            clearStoredKey(); // Clear bad key
+            clearStoredKey();
             appendDarkAGIMessage('assistant', "错误：无效的 API Key。\n请重新输入有效的 OpenRouter API Key。");
             return; 
         }
 
-        // Regular Fallback for model list failure
         darkAgiState.models = FALLBACK_MODELS;
         darkAgiState.initialized = true;
         const display = document.getElementById('darkagi-model-display');
@@ -357,12 +352,10 @@ const appendDarkAGIMessage = (role, text, metrics = null) => {
     let safeText = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     let contentHtml = safeText.replace(/\n/g, '<br>');
     
-    // Style update for Tech Theme
     const bubbleClass = role === 'user' 
         ? 'bg-indigo-600/90 text-white rounded-2xl rounded-tr-none shadow-lg shadow-indigo-900/20 border border-indigo-500/30'
         : 'bg-slate-800/80 text-slate-300 rounded-2xl rounded-tl-none border border-slate-700 shadow-xl backdrop-blur-sm';
 
-    // Metrics Footer HTML
     let metricsHtml = '';
     if (metrics) {
         const modelName = metrics.model.replace(':free', '');
@@ -389,14 +382,85 @@ const appendDarkAGIMessage = (role, text, metrics = null) => {
     container.appendChild(div);
     container.scrollTop = container.scrollHeight;
     
-    if (role !== 'system') { // Don't add system prompts to history context generally
+    if (role !== 'system') { 
         darkAgiState.history.push({ role, content: text });
     }
 };
 
-// Extracted Core Logic for reuse (Retry)
-const executeAIRequest = async () => {
-    if (darkAgiState.loading) return;
+// --- TOOL FUNCTIONS (RAG) ---
+
+const TOOL_BASE_URL = "https://xn--zlvp56j.com";
+
+const performSearch = async (query) => {
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+
+        const response = await fetch(`${TOOL_BASE_URL}/search`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ q: query, num_results: 5 }),
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
+        if (!response.ok) throw new Error("Search API error");
+        const data = await response.json();
+        
+        if (!data.results || data.results.length === 0) return "未找到相关结果。";
+        
+        return data.results.map(r => `标题: ${r[0]}\n链接: ${r[1]}`).join('\n\n');
+    } catch (err) {
+        return `搜索失败: ${err.message}`;
+    }
+};
+
+const performWebFetch = async (url) => {
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+
+        const response = await fetch(`${TOOL_BASE_URL}/fetch?url=${encodeURIComponent(url)}`, {
+            method: 'GET',
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
+        if (!response.ok) throw new Error("Fetch API error");
+        const text = await response.text();
+        
+        // Simple HTML cleanup to extract text content roughly
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = text;
+        
+        // Remove scripts and styles
+        const scripts = tempDiv.getElementsByTagName('script');
+        for (let i = scripts.length - 1; i >= 0; i--) scripts[i].parentNode.removeChild(scripts[i]);
+        const styles = tempDiv.getElementsByTagName('style');
+        for (let i = styles.length - 1; i >= 0; i--) styles[i].parentNode.removeChild(styles[i]);
+        
+        let cleanText = tempDiv.textContent || tempDiv.innerText || "";
+        // Collapse whitespace
+        cleanText = cleanText.replace(/\s+/g, ' ').trim();
+        
+        // Truncate to avoid token limits (approx 2000 chars)
+        return cleanText.substring(0, 3000) + (cleanText.length > 3000 ? "\n...(内容过长已截断)" : "");
+    } catch (err) {
+        return `网页读取失败: ${err.message}`;
+    }
+};
+
+// Extracted Core Logic for reuse (Retry & Recursive Tool Use)
+const executeAIRequest = async (recursionDepth = 0) => {
+    // Prevent infinite loops
+    if (recursionDepth > 3) {
+        appendDarkAGIMessage('assistant', "错误：工具调用深度过大，已终止。");
+        darkAgiState.loading = false;
+        toggleInputState(true);
+        return;
+    }
+
+    if (darkAgiState.loading && recursionDepth === 0) return;
 
     const btn = document.getElementById('darkagi-send-btn');
     const container = document.getElementById('darkagi-chat-container');
@@ -407,34 +471,50 @@ const executeAIRequest = async () => {
         return;
     }
     
-    darkAgiState.loading = true;
-    if(btn) {
-        btn.disabled = true;
-        btn.classList.add('opacity-50', 'cursor-not-allowed');
+    // Set UI Loading State
+    if (recursionDepth === 0) {
+        darkAgiState.loading = true;
+        toggleInputState(false);
     }
 
     // 1. Select a new random model for this specific request
-    // This distributes load and avoids 429s on specific models
     let model = null;
     if (darkAgiState.models && darkAgiState.models.length > 0) {
-        model = await selectRandomModelWithAnimation();
+        // Only animate on the first turn of a user query, skip animation for tool recursion
+        if (recursionDepth === 0) {
+            model = await selectRandomModelWithAnimation();
+        } else {
+             // Re-use a random model or pick new one quickly without animation
+             const randomM = darkAgiState.models[Math.floor(Math.random() * darkAgiState.models.length)];
+             model = randomM.id;
+             // Update display silently
+             const display = document.getElementById('darkagi-model-display');
+             if(display) {
+                 const name = (randomM.name || randomM.id).replace(':free', '');
+                 display.innerText = name;
+                 display.classList.add("text-cyan-400");
+             }
+        }
     }
     
     if (!model) {
-        // Fallback safety - Default to Llama instead of Google
         model = "meta-llama/llama-3.2-11b-vision-instruct:free"; 
     }
 
     // Add Loading Indicator
+    const loadingId = `loading-${Date.now()}`;
     const loadingDiv = document.createElement('div');
     loadingDiv.className = "flex justify-start w-full";
-    loadingDiv.id = "darkagi-loading-indicator";
+    loadingDiv.id = loadingId;
     loadingDiv.innerHTML = `
         <div class="bg-slate-800/80 border border-slate-700 rounded-2xl rounded-tl-none px-5 py-4 shadow-md">
-            <div class="flex space-x-1.5">
-                <div class="w-2 h-2 bg-indigo-500 rounded-full animate-bounce"></div>
-                <div class="w-2 h-2 bg-indigo-500 rounded-full animate-bounce delay-75"></div>
-                <div class="w-2 h-2 bg-indigo-500 rounded-full animate-bounce delay-150"></div>
+            <div class="flex items-center space-x-3">
+                <div class="flex space-x-1.5">
+                    <div class="w-2 h-2 bg-indigo-500 rounded-full animate-bounce"></div>
+                    <div class="w-2 h-2 bg-indigo-500 rounded-full animate-bounce delay-75"></div>
+                    <div class="w-2 h-2 bg-indigo-500 rounded-full animate-bounce delay-150"></div>
+                </div>
+                <span class="text-xs text-slate-400 font-mono animate-pulse" id="${loadingId}-text">正在思考...</span>
             </div>
         </div>
     `;
@@ -474,94 +554,162 @@ const executeAIRequest = async () => {
         }
 
         const data = await response.json();
-        const aiText = data.choices[0]?.message?.content || "未收到响应。";
-        
-        // Extract Usage Stats
+        const aiText = data.choices[0]?.message?.content || "";
         const usage = data.usage || { prompt_tokens: '?', completion_tokens: '?' };
 
         loadingDiv.remove();
-        
-        // Pass metrics to the append function
-        appendDarkAGIMessage('assistant', aiText, {
-            model: model,
-            input: usage.prompt_tokens,
-            output: usage.completion_tokens,
-            time: latency
-        });
+
+        // --- CHECK FOR TOOL CALLS via TEXT PATTERNS ---
+        const searchMatch = aiText.match(/\[\[SEARCH:\s*(.+?)\]\]/);
+        const visitMatch = aiText.match(/\[\[VISIT:\s*(.+?)\]\]/);
+
+        if (searchMatch || visitMatch) {
+            // Push model's request to history
+            darkAgiState.history.push({ role: 'assistant', content: aiText });
+            
+            // UI Feedback for Tool Use
+            const toolMsgDiv = document.createElement('div');
+            toolMsgDiv.className = "flex justify-start w-full mb-4";
+            
+            let toolResult = "";
+            let toolName = "";
+
+            if (searchMatch) {
+                const query = searchMatch[1].trim();
+                toolName = `搜索: ${query}`;
+                toolMsgDiv.innerHTML = getToolUiHTML("SEARCH", query);
+                container.appendChild(toolMsgDiv);
+                container.scrollTop = container.scrollHeight;
+                
+                toolResult = await performSearch(query);
+            } else if (visitMatch) {
+                const url = visitMatch[1].trim();
+                toolName = `访问: ${url}`;
+                toolMsgDiv.innerHTML = getToolUiHTML("VISIT", url);
+                container.appendChild(toolMsgDiv);
+                container.scrollTop = container.scrollHeight;
+
+                toolResult = await performWebFetch(url);
+            }
+
+            // Remove the temporary tool UI after getting result or keep it? 
+            // Better to update it to show "Done".
+            toolMsgDiv.innerHTML = getToolUiHTML("DONE", toolName, true);
+
+            // Add result to history as System observation
+            const observation = `[系统工具返回结果]:\n${toolResult}`;
+            darkAgiState.history.push({ role: 'system', content: observation });
+
+            // Recursive Call
+            await executeAIRequest(recursionDepth + 1);
+
+        } else {
+            // Normal response, final answer
+            appendDarkAGIMessage('assistant', aiText || "无内容返回。", {
+                model: model,
+                input: usage.prompt_tokens,
+                output: usage.completion_tokens,
+                time: latency
+            });
+            
+            darkAgiState.loading = false;
+            toggleInputState(true);
+        }
 
     } catch (err) {
         console.error(err);
         loadingDiv.remove();
-        
-        let errorMessage = "未知错误";
-        let detailedDebug = "";
-
-        // Check if it's our custom error object containing response info
-        if (err.responseText !== undefined) {
-             try {
-                const jsonError = JSON.parse(err.responseText);
-                errorMessage = jsonError.error?.message || jsonError.message || `API 错误 ${err.status}`;
-            } catch (e) {
-                errorMessage = `API 错误 ${err.status}: ${err.responseText.substring(0, 50)}...`;
-            }
-
-            // Create detailed debug view
-            detailedDebug = `
-                <div class="mt-2 space-y-2">
-                    <details>
-                        <summary class="cursor-pointer text-indigo-400 hover:text-indigo-300 text-[10px] outline-none select-none">▶ 查看请求载荷</summary>
-                        <pre class="mt-1 p-2 bg-slate-950 rounded text-[10px] overflow-x-auto whitespace-pre-wrap text-slate-400 border border-slate-800">${JSON.stringify(err.requestBody, null, 2)}</pre>
-                    </details>
-                    <details open>
-                        <summary class="cursor-pointer text-red-400 hover:text-red-300 text-[10px] outline-none select-none">▶ 查看完整响应</summary>
-                        <pre class="mt-1 p-2 bg-slate-950 rounded text-[10px] overflow-x-auto whitespace-pre-wrap text-red-300 border border-red-900/30">${err.responseText}</pre>
-                    </details>
-                </div>
-            `;
-        } else {
-            errorMessage = err.message || "网络/客户端错误";
-            detailedDebug = `<span class="text-slate-600 text-[10px] italic">${err.stack || ''}</span>`;
-        }
-        
-        const errorId = `error-${Date.now()}`;
-        
-        const div = document.createElement('div');
-        div.className = "flex justify-start w-full";
-        div.id = errorId;
-        div.innerHTML = `
-            <div class="bg-slate-900 border border-red-900 rounded-2xl rounded-tl-none px-5 py-3.5 max-w-[95%] shadow-md break-all">
-                <div class="flex justify-between items-start mb-2">
-                    <span class="text-red-400 font-bold font-mono text-xs">连接失败</span>
-                    <button onclick="window.retryDarkAGI('${errorId}')" class="text-[10px] bg-red-900/50 hover:bg-red-800 text-white px-2 py-1 rounded border border-red-700 transition-colors uppercase font-mono tracking-wider">
-                        重试 ⟳
-                    </button>
-                </div>
-                <div class="font-mono text-xs text-red-200 mb-2 p-2 bg-red-950/30 rounded border border-red-500/10">
-                    ${errorMessage}
-                </div>
-                ${detailedDebug}
-            </div>
-        `;
-        container.appendChild(div);
-        
-    } finally {
+        handleError(err, container);
         darkAgiState.loading = false;
-        if(btn) {
-            btn.disabled = false;
-            btn.classList.remove('opacity-50', 'cursor-not-allowed');
-        }
-        const input = document.getElementById('darkagi-input');
-        if(input) setTimeout(() => input.focus(), 50);
+        toggleInputState(true);
     }
 };
 
+const getToolUiHTML = (type, content, isDone = false) => {
+    const icon = type === "SEARCH" 
+        ? '<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>'
+        : '<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>';
+    
+    const colorClass = isDone ? "text-slate-500 border-slate-700 bg-slate-900/50" : "text-cyan-400 border-cyan-500/30 bg-cyan-950/30 animate-pulse";
+    const statusText = isDone ? "工具调用完成" : (type === "SEARCH" ? "正在搜索网络..." : "正在读取网页...");
+    
+    return `
+        <div class="flex items-center space-x-3 px-4 py-2 rounded-lg border ${colorClass} text-xs font-mono max-w-[85%]">
+            ${icon}
+            <span class="truncate max-w-[200px]">${content}</span>
+            <span class="opacity-50">| ${statusText}</span>
+        </div>
+    `;
+}
+
+const toggleInputState = (enabled) => {
+    const btn = document.getElementById('darkagi-send-btn');
+    if (btn) {
+        btn.disabled = !enabled;
+        if (!enabled) btn.classList.add('opacity-50', 'cursor-not-allowed');
+        else btn.classList.remove('opacity-50', 'cursor-not-allowed');
+    }
+    if (enabled) {
+        const input = document.getElementById('darkagi-input');
+        if(input) setTimeout(() => input.focus(), 50);
+    }
+}
+
+const handleError = (err, container) => {
+    let errorMessage = "未知错误";
+    let detailedDebug = "";
+
+    if (err.responseText !== undefined) {
+            try {
+            const jsonError = JSON.parse(err.responseText);
+            errorMessage = jsonError.error?.message || jsonError.message || `API 错误 ${err.status}`;
+        } catch (e) {
+            errorMessage = `API 错误 ${err.status}: ${err.responseText.substring(0, 50)}...`;
+        }
+
+        detailedDebug = `
+            <div class="mt-2 space-y-2">
+                <details>
+                    <summary class="cursor-pointer text-indigo-400 hover:text-indigo-300 text-[10px] outline-none select-none">▶ 查看请求载荷</summary>
+                    <pre class="mt-1 p-2 bg-slate-950 rounded text-[10px] overflow-x-auto whitespace-pre-wrap text-slate-400 border border-slate-800">${JSON.stringify(err.requestBody, null, 2)}</pre>
+                </details>
+                <details open>
+                    <summary class="cursor-pointer text-red-400 hover:text-red-300 text-[10px] outline-none select-none">▶ 查看完整响应</summary>
+                    <pre class="mt-1 p-2 bg-slate-950 rounded text-[10px] overflow-x-auto whitespace-pre-wrap text-red-300 border border-red-900/30">${err.responseText}</pre>
+                </details>
+            </div>
+        `;
+    } else {
+        errorMessage = err.message || "网络/客户端错误";
+        detailedDebug = `<span class="text-slate-600 text-[10px] italic">${err.stack || ''}</span>`;
+    }
+    
+    const errorId = `error-${Date.now()}`;
+    
+    const div = document.createElement('div');
+    div.className = "flex justify-start w-full";
+    div.id = errorId;
+    div.innerHTML = `
+        <div class="bg-slate-900 border border-red-900 rounded-2xl rounded-tl-none px-5 py-3.5 max-w-[95%] shadow-md break-all">
+            <div class="flex justify-between items-start mb-2">
+                <span class="text-red-400 font-bold font-mono text-xs">连接失败</span>
+                <button onclick="window.retryDarkAGI('${errorId}')" class="text-[10px] bg-red-900/50 hover:bg-red-800 text-white px-2 py-1 rounded border border-red-700 transition-colors uppercase font-mono tracking-wider">
+                    重试 ⟳
+                </button>
+            </div>
+            <div class="font-mono text-xs text-red-200 mb-2 p-2 bg-red-950/30 rounded border border-red-500/10">
+                ${errorMessage}
+            </div>
+            ${detailedDebug}
+        </div>
+    `;
+    container.appendChild(div);
+}
+
 // Retry handler exposed globally
 window.retryDarkAGI = (elementId) => {
-    // Remove the error message UI
     const el = document.getElementById(elementId);
     if(el) el.remove();
-    
-    // Trigger request again (will re-roll model automatically)
     executeAIRequest();
 };
 
@@ -578,7 +726,6 @@ const handleDarkAGISend = async (e) => {
         if (message.startsWith('sk-or-')) {
              setStoredKey(message);
              input.value = '';
-             // Mask user input visually in chat history
              appendDarkAGIMessage('user', '********************************');
              appendDarkAGIMessage('assistant', '访问令牌已接受。正在初始化连接...');
              initDarkAGI();
@@ -590,11 +737,10 @@ const handleDarkAGISend = async (e) => {
         return;
     }
 
-    // Regular Chat Logic
     input.value = '';
     input.style.height = 'auto'; 
     appendDarkAGIMessage('user', message);
-    executeAIRequest();
+    executeAIRequest(); // Start first turn (depth 0)
 };
 
 // New feature: Clear Key
