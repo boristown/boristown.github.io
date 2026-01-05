@@ -157,9 +157,9 @@ const getSystemPrompt = () => {
         content: `你的名字叫做暗黑AGI，英文名DarkAGI。请使用中文与用户对话。
 当前时间：${dateStr} ${timeStr}
 
-你拥有联网能力，可以实时搜索信息或阅读网页。
+你拥有联网能力和代码执行能力。
 
-当遇到你不知道的信息、最近发生的新闻或需要具体网页内容时，请严格按照以下格式输出指令：
+当遇到你不知道的信息、最近发生的新闻、需要具体网页内容，或者需要进行精确计算、复杂逻辑处理时，请严格按照以下格式输出指令：
 
 1. 搜索网络：
 [[SEARCH: 搜索关键词]]
@@ -167,8 +167,13 @@ const getSystemPrompt = () => {
 2. 阅读网页：
 [[VISIT: 网址]]
 
+3. 运行Python代码 (用于数学计算、数据处理):
+[[PYTHON: 代码内容]]
+* 注意：必须使用 print() 函数输出结果，否则你将看不到任何返回。
+
 请注意：
 - 每次回复只输出一个指令，不要输出多余的解释。
+- 运行Python代码时，直接在 [[PYTHON: ...]] 中写入纯代码，不需要 Markdown 代码块标记（如 \`\`\`python）。
 - 等待提供工具结果后，再综合信息回答用户。
 - 如果不需要工具，直接回答用户。
 - 如果系统提示工具调用失败（例如网络错误），请告知用户服务暂不可用，**绝对不要**重复尝试相同的指令。`
@@ -401,7 +406,7 @@ const appendDarkAGIMessage = (role, text, metrics = null) => {
     }
 };
 
-// --- TOOL FUNCTIONS (RAG) ---
+// --- TOOL FUNCTIONS (RAG & SANDBOX) ---
 
 const TOOL_BASE_URL = "https://xn--zlvp56j.com";
 
@@ -468,10 +473,46 @@ const performWebFetch = async (url) => {
     }
 };
 
+const performPythonSandbox = async (code) => {
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout for execution
+
+        // Clean up code if model accidentally included markdown backticks
+        let cleanCode = code.replace(/```python/gi, '').replace(/```/g, '').trim();
+
+        const response = await fetch(`${TOOL_BASE_URL}/sandbox`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code: cleanCode }),
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
+        if (!response.ok) throw new Error(`Sandbox API error: ${response.status}`);
+        const data = await response.json();
+        
+        // Format result based on response
+        if (data.timed_out) {
+            return "执行超时 (10s)。";
+        }
+        
+        let result = "";
+        if (data.stdout) result += `[STDOUT]\n${data.stdout}\n`;
+        if (data.stderr) result += `[STDERR]\n${data.stderr}\n`;
+        if (!data.stdout && !data.stderr) result += "[无输出] (请确保使用了 print 函数)";
+        
+        return result.trim();
+
+    } catch (err) {
+        return `代码执行失败: ${err.message}`;
+    }
+};
+
 // Extracted Core Logic for reuse (Retry & Recursive Tool Use)
 const executeAIRequest = async (recursionDepth = 0) => {
     // Prevent infinite loops
-    if (recursionDepth > 3) {
+    if (recursionDepth > 5) {
         appendDarkAGIMessage('assistant', "错误：工具调用深度过大，已终止。");
         darkAgiState.loading = false;
         toggleInputState(true);
@@ -580,8 +621,9 @@ const executeAIRequest = async (recursionDepth = 0) => {
         // --- CHECK FOR TOOL CALLS via TEXT PATTERNS ---
         const searchMatch = aiText.match(/\[\[SEARCH:\s*(.+?)\]\]/);
         const visitMatch = aiText.match(/\[\[VISIT:\s*(.+?)\]\]/);
+        const pythonMatch = aiText.match(/\[\[PYTHON:\s*([\s\S]+?)\]\]/); // Multiline match for Python
 
-        if (searchMatch || visitMatch) {
+        if (searchMatch || visitMatch || pythonMatch) {
             // Push model's request to history
             darkAgiState.history.push({ role: 'assistant', content: aiText });
             
@@ -600,6 +642,7 @@ const executeAIRequest = async (recursionDepth = 0) => {
                 container.scrollTop = container.scrollHeight;
                 
                 toolResult = await performSearch(query);
+
             } else if (visitMatch) {
                 const url = visitMatch[1].trim();
                 toolName = `访问: ${url}`;
@@ -608,10 +651,21 @@ const executeAIRequest = async (recursionDepth = 0) => {
                 container.scrollTop = container.scrollHeight;
 
                 toolResult = await performWebFetch(url);
+
+            } else if (pythonMatch) {
+                const code = pythonMatch[1].trim();
+                toolName = `执行代码 (Python)`;
+                // For Python, we might want to truncate the display if it's too long
+                const displayCode = code.length > 50 ? code.substring(0, 50) + "..." : code;
+                
+                toolMsgDiv.innerHTML = getToolUiHTML("PYTHON", displayCode);
+                container.appendChild(toolMsgDiv);
+                container.scrollTop = container.scrollHeight;
+
+                toolResult = await performPythonSandbox(code);
             }
 
-            // Remove the temporary tool UI after getting result or keep it? 
-            // Better to update it to show "Done".
+            // Update UI to show "Done"
             toolMsgDiv.innerHTML = getToolUiHTML("DONE", toolName, true);
 
             // Add result to history as System observation
@@ -644,18 +698,31 @@ const executeAIRequest = async (recursionDepth = 0) => {
 };
 
 const getToolUiHTML = (type, content, isDone = false) => {
-    const icon = type === "SEARCH" 
-        ? '<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>'
-        : '<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>';
+    let icon = '';
+    let statusText = '';
     
+    if (type === "SEARCH") {
+        icon = '<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>';
+        statusText = "正在搜索网络...";
+    } else if (type === "VISIT") {
+        icon = '<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>';
+        statusText = "正在读取网页...";
+    } else if (type === "PYTHON") {
+        icon = '<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>';
+        statusText = "正在执行代码...";
+    }
+
+    if (isDone) {
+        statusText = "工具调用完成";
+    }
+
     const colorClass = isDone ? "text-slate-500 border-slate-700 bg-slate-900/50" : "text-cyan-400 border-cyan-500/30 bg-cyan-950/30 animate-pulse";
-    const statusText = isDone ? "工具调用完成" : (type === "SEARCH" ? "正在搜索网络..." : "正在读取网页...");
     
     return `
         <div class="flex items-center space-x-3 px-4 py-2 rounded-lg border ${colorClass} text-xs font-mono max-w-[85%]">
             ${icon}
-            <span class="truncate max-w-[200px]">${content}</span>
-            <span class="opacity-50">| ${statusText}</span>
+            <span class="truncate max-w-[200px] font-mono">${content}</span>
+            <span class="opacity-50 border-l border-current pl-3 ml-1">${statusText}</span>
         </div>
     `;
 }
