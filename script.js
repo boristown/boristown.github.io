@@ -413,9 +413,13 @@ const appendDarkAGIMessage = (role, text, metrics = null) => {
 // --- TOOL FUNCTIONS (RAG & SANDBOX) ---
 
 const TOOL_BASE_URL = "https://xn--zlvp56j.com";
+// Use CodeTabs as alternative proxy since corsproxy.io was problematic for user
+const CORS_PROXY = "https://api.codetabs.com/v1/proxy?quest=";
 
 const performSearch = async (query) => {
-    const url = `${TOOL_BASE_URL}/search`;
+    const targetUrl = `${TOOL_BASE_URL}/search`;
+    const proxyUrl = `${CORS_PROXY}${targetUrl}`;
+    
     const payload = {
         q: query,
         num_result: 5
@@ -424,7 +428,8 @@ const performSearch = async (query) => {
     const debugInfo = {
         action: "SEARCH",
         request: {
-            url: url,
+            url: proxyUrl,
+            originalUrl: targetUrl,
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: payload
@@ -437,14 +442,12 @@ const performSearch = async (query) => {
         // Increase timeout to 60 seconds
         const timeoutId = setTimeout(() => controller.abort(), 60000); 
 
-        const response = await fetch(url, {
+        const response = await fetch(proxyUrl, {
             method: 'POST',
             headers: {
                 "Content-Type": "application/json"
             },
             body: JSON.stringify(payload),
-            credentials: 'omit', 
-            referrerPolicy: 'no-referrer', 
             signal: controller.signal
         });
         clearTimeout(timeoutId);
@@ -473,11 +476,11 @@ const performSearch = async (query) => {
         
         if (err.message === 'Failed to fetch') {
              debugInfo.possibleCauses = [
-                 "SSL证书无效 (浏览器拦截了不安全的自签名证书)",
-                 "CORS 跨域限制 (目标服务器未允许当前域名访问)",
+                 "CORS 跨域限制 (当前使用 CodeTabs 代理尝试绕过)",
+                 "目标服务器 SSL 证书无效 (代理服务器可能拒绝连接)",
                  "网络连接中断"
              ];
-             return { text: `网络请求失败 (Failed to fetch)。\n原因可能是 SSL 证书不受信任或 CORS 跨域限制。\n请在浏览器控制台 (F12) 的 Network 标签页查看红色报错请求的详细信息。`, debug: debugInfo };
+             return { text: `网络请求失败 (Failed to fetch)。\n已尝试使用代理绕过 CORS，但可能因目标服务器证书问题被拦截。\n建议：检查目标服务器 SSL 配置。`, debug: debugInfo };
         }
 
         return { text: `搜索失败: ${err.message}`, debug: debugInfo };
@@ -485,12 +488,14 @@ const performSearch = async (query) => {
 };
 
 const performWebFetch = async (url) => {
-    const requestUrl = `${TOOL_BASE_URL}/fetch?url=${encodeURIComponent(url)}`;
+    const targetUrl = `${TOOL_BASE_URL}/fetch?url=${encodeURIComponent(url)}`;
+    const proxyUrl = `${CORS_PROXY}${targetUrl}`;
     
     const debugInfo = {
         action: "VISIT",
         request: {
-            url: requestUrl,
+            url: proxyUrl,
+            originalUrl: targetUrl,
             method: "GET"
         },
         response: null
@@ -500,10 +505,8 @@ const performWebFetch = async (url) => {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 60000); 
 
-        const response = await fetch(requestUrl, {
+        const response = await fetch(proxyUrl, {
             method: 'GET',
-            credentials: 'omit',
-            referrerPolicy: 'no-referrer',
             signal: controller.signal
         });
         clearTimeout(timeoutId);
@@ -542,7 +545,7 @@ const performWebFetch = async (url) => {
         }
 
         if (err.message === 'Failed to fetch') {
-             debugInfo.possibleCauses = ["SSL证书拦截", "CORS跨域限制", "网络不通"];
+             debugInfo.possibleCauses = ["CORS/SSL 错误 (代理失败)", "网络不通"];
              return { text: `网页读取网络错误 (Failed to fetch)。\n请在浏览器控制台查看详细原因。`, debug: debugInfo };
         }
         
@@ -554,13 +557,16 @@ const performPythonSandbox = async (code) => {
     // Clean up code if model accidentally included markdown backticks
     let cleanCode = code.replace(/```python/gi, '').replace(/```/g, '').trim();
     
-    const url = `${TOOL_BASE_URL}/sandbox`;
+    const targetUrl = `${TOOL_BASE_URL}/sandbox`;
+    const proxyUrl = `${CORS_PROXY}${targetUrl}`;
+
     const payload = { code: cleanCode };
     
     const debugInfo = {
         action: "PYTHON",
         request: {
-            url: url,
+            url: proxyUrl,
+            originalUrl: targetUrl,
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: payload
@@ -572,12 +578,10 @@ const performPythonSandbox = async (code) => {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout for execution
 
-        const response = await fetch(url, {
+        const response = await fetch(proxyUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
-            credentials: 'omit',
-            referrerPolicy: 'no-referrer',
             signal: controller.signal
         });
         clearTimeout(timeoutId);
@@ -609,7 +613,7 @@ const performPythonSandbox = async (code) => {
         }
 
         if (err.message === 'Failed to fetch') {
-             debugInfo.possibleCauses = ["SSL证书拦截", "CORS跨域限制", "网络不通"];
+             debugInfo.possibleCauses = ["CORS/SSL 错误 (代理失败)", "网络不通"];
              return { text: `代码沙箱连接失败 (Failed to fetch)。\n请在浏览器控制台查看详细原因。`, debug: debugInfo };
         }
 
