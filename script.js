@@ -434,7 +434,8 @@ const performSearch = async (query) => {
 
     try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+        // Increase timeout to 60 seconds
+        const timeoutId = setTimeout(() => controller.abort(), 60000); 
 
         const response = await fetch(url, {
             method: 'POST',
@@ -451,7 +452,7 @@ const performSearch = async (query) => {
         debugInfo.status = response.status;
         debugInfo.statusText = response.statusText;
 
-        if (!response.ok) throw new Error(`Search API error: ${response.status}`);
+        if (!response.ok) throw new Error(`Search API error: ${response.status} ${response.statusText}`);
         const data = await response.json();
         debugInfo.response = data;
         
@@ -464,6 +465,21 @@ const performSearch = async (query) => {
 
     } catch (err) {
         debugInfo.error = err.message;
+        debugInfo.errorType = err.name;
+        
+        if (err.name === 'AbortError') {
+             return { text: `搜索请求超时 (60s)。请检查网络状况。`, debug: debugInfo };
+        }
+        
+        if (err.message === 'Failed to fetch') {
+             debugInfo.possibleCauses = [
+                 "SSL证书无效 (浏览器拦截了不安全的自签名证书)",
+                 "CORS 跨域限制 (目标服务器未允许当前域名访问)",
+                 "网络连接中断"
+             ];
+             return { text: `网络请求失败 (Failed to fetch)。\n原因可能是 SSL 证书不受信任或 CORS 跨域限制。\n请在浏览器控制台 (F12) 的 Network 标签页查看红色报错请求的详细信息。`, debug: debugInfo };
+        }
+
         return { text: `搜索失败: ${err.message}`, debug: debugInfo };
     }
 };
@@ -482,7 +498,7 @@ const performWebFetch = async (url) => {
 
     try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+        const timeoutId = setTimeout(() => controller.abort(), 60000); 
 
         const response = await fetch(requestUrl, {
             method: 'GET',
@@ -494,7 +510,7 @@ const performWebFetch = async (url) => {
 
         debugInfo.status = response.status;
 
-        if (!response.ok) throw new Error(`Fetch API error: ${response.status}`);
+        if (!response.ok) throw new Error(`Fetch API error: ${response.status} ${response.statusText}`);
         const text = await response.text();
         debugInfo.rawLength = text.length;
         
@@ -519,6 +535,17 @@ const performWebFetch = async (url) => {
         return { text: truncated, debug: debugInfo };
     } catch (err) {
         debugInfo.error = err.message;
+        debugInfo.errorType = err.name;
+
+        if (err.name === 'AbortError') {
+             return { text: `网页读取请求超时 (60s)。`, debug: debugInfo };
+        }
+
+        if (err.message === 'Failed to fetch') {
+             debugInfo.possibleCauses = ["SSL证书拦截", "CORS跨域限制", "网络不通"];
+             return { text: `网页读取网络错误 (Failed to fetch)。\n请在浏览器控制台查看详细原因。`, debug: debugInfo };
+        }
+        
         return { text: `网页读取失败: ${err.message}`, debug: debugInfo };
     }
 };
@@ -543,7 +570,7 @@ const performPythonSandbox = async (code) => {
 
     try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout for execution
+        const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout for execution
 
         const response = await fetch(url, {
             method: 'POST',
@@ -557,13 +584,13 @@ const performPythonSandbox = async (code) => {
 
         debugInfo.status = response.status;
         
-        if (!response.ok) throw new Error(`Sandbox API error: ${response.status}`);
+        if (!response.ok) throw new Error(`Sandbox API error: ${response.status} ${response.statusText}`);
         const data = await response.json();
         debugInfo.response = data;
         
         // Format result based on response
         if (data.timed_out) {
-            return { text: "执行超时 (10s)。", debug: debugInfo };
+            return { text: "执行超时 (Server Side Timeout)。", debug: debugInfo };
         }
         
         let result = "";
@@ -575,6 +602,17 @@ const performPythonSandbox = async (code) => {
 
     } catch (err) {
         debugInfo.error = err.message;
+        debugInfo.errorType = err.name;
+
+        if (err.name === 'AbortError') {
+             return { text: `代码执行请求超时 (60s)。`, debug: debugInfo };
+        }
+
+        if (err.message === 'Failed to fetch') {
+             debugInfo.possibleCauses = ["SSL证书拦截", "CORS跨域限制", "网络不通"];
+             return { text: `代码沙箱连接失败 (Failed to fetch)。\n请在浏览器控制台查看详细原因。`, debug: debugInfo };
+        }
+
         return { text: `代码执行失败: ${err.message}`, debug: debugInfo };
     }
 };
