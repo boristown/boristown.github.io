@@ -417,7 +417,7 @@ const TOOL_BASE_URL = "https://xn--zlvp56j.com";
 const performSearch = async (query) => {
     const debugInfo = {
         action: "SEARCH",
-        params: { q: query, num_results: 5 },
+        params: { q: query, num_result: 5 },
         response: null
     };
 
@@ -425,14 +425,15 @@ const performSearch = async (query) => {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
 
-        const params = new URLSearchParams({
-            q: query,
-            num_results: 5
-        });
-
-        // Use GET instead of POST to avoid CORS preflight issues and match example
-        const response = await fetch(`${TOOL_BASE_URL}/search?${params.toString()}`, {
-            method: 'GET',
+        const response = await fetch(`${TOOL_BASE_URL}/search`, {
+            method: 'POST',
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                q: query,
+                num_result: 5
+            }),
             signal: controller.signal
         });
         clearTimeout(timeoutId);
