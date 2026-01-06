@@ -413,18 +413,24 @@ const appendDarkAGIMessage = (role, text, metrics = null) => {
 // --- TOOL FUNCTIONS (RAG & SANDBOX) ---
 
 const TOOL_BASE_URL = "https://xn--zlvp56j.com";
+// Use corsproxy.io to bypass browser CORS restrictions for external APIs
+const CORS_PROXY = "https://corsproxy.io/?";
 
 const performSearch = async (query) => {
-    const url = `${TOOL_BASE_URL}/search`;
+    const targetUrl = `${TOOL_BASE_URL}/search`;
     const payload = {
         q: query,
         num_result: 5
     };
     
+    // Construct the proxy URL
+    const proxyUrl = `${CORS_PROXY}${targetUrl}`;
+
     const debugInfo = {
         action: "SEARCH",
         request: {
-            url: url,
+            url: proxyUrl,
+            targetUrl: targetUrl,
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: payload
@@ -436,12 +442,15 @@ const performSearch = async (query) => {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
 
-        const response = await fetch(url, {
+        const response = await fetch(proxyUrl, {
             method: 'POST',
             headers: {
                 "Content-Type": "application/json"
             },
             body: JSON.stringify(payload),
+            mode: 'cors', // Explicitly request CORS
+            credentials: 'omit', // Don't send cookies
+            referrerPolicy: 'no-referrer', // Privacy
             signal: controller.signal
         });
         clearTimeout(timeoutId);
@@ -467,12 +476,14 @@ const performSearch = async (query) => {
 };
 
 const performWebFetch = async (url) => {
-    const requestUrl = `${TOOL_BASE_URL}/fetch?url=${encodeURIComponent(url)}`;
+    const targetUrl = `${TOOL_BASE_URL}/fetch?url=${encodeURIComponent(url)}`;
+    const proxyUrl = `${CORS_PROXY}${targetUrl}`;
     
     const debugInfo = {
         action: "VISIT",
         request: {
-            url: requestUrl,
+            url: proxyUrl,
+            targetUrl: targetUrl,
             method: "GET"
         },
         response: null
@@ -482,8 +493,11 @@ const performWebFetch = async (url) => {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
 
-        const response = await fetch(requestUrl, {
+        const response = await fetch(proxyUrl, {
             method: 'GET',
+            mode: 'cors',
+            credentials: 'omit',
+            referrerPolicy: 'no-referrer',
             signal: controller.signal
         });
         clearTimeout(timeoutId);
@@ -523,13 +537,15 @@ const performPythonSandbox = async (code) => {
     // Clean up code if model accidentally included markdown backticks
     let cleanCode = code.replace(/```python/gi, '').replace(/```/g, '').trim();
     
-    const url = `${TOOL_BASE_URL}/sandbox`;
+    const targetUrl = `${TOOL_BASE_URL}/sandbox`;
     const payload = { code: cleanCode };
+    const proxyUrl = `${CORS_PROXY}${targetUrl}`;
     
     const debugInfo = {
         action: "PYTHON",
         request: {
-            url: url,
+            url: proxyUrl,
+            targetUrl: targetUrl,
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: payload
@@ -541,10 +557,13 @@ const performPythonSandbox = async (code) => {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout for execution
 
-        const response = await fetch(url, {
+        const response = await fetch(proxyUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
+            mode: 'cors',
+            credentials: 'omit',
+            referrerPolicy: 'no-referrer',
             signal: controller.signal
         });
         clearTimeout(timeoutId);
