@@ -415,9 +415,20 @@ const appendDarkAGIMessage = (role, text, metrics = null) => {
 const TOOL_BASE_URL = "https://xn--zlvp56j.com";
 
 const performSearch = async (query) => {
+    const url = `${TOOL_BASE_URL}/search`;
+    const payload = {
+        q: query,
+        num_result: 5
+    };
+    
     const debugInfo = {
         action: "SEARCH",
-        params: { q: query, num_result: 5 },
+        request: {
+            url: url,
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: payload
+        },
         response: null
     };
 
@@ -425,15 +436,12 @@ const performSearch = async (query) => {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
 
-        const response = await fetch(`${TOOL_BASE_URL}/search`, {
+        const response = await fetch(url, {
             method: 'POST',
             headers: {
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify({
-                q: query,
-                num_result: 5
-            }),
+            body: JSON.stringify(payload),
             signal: controller.signal
         });
         clearTimeout(timeoutId);
@@ -459,9 +467,14 @@ const performSearch = async (query) => {
 };
 
 const performWebFetch = async (url) => {
+    const requestUrl = `${TOOL_BASE_URL}/fetch?url=${encodeURIComponent(url)}`;
+    
     const debugInfo = {
         action: "VISIT",
-        params: { url: url },
+        request: {
+            url: requestUrl,
+            method: "GET"
+        },
         response: null
     };
 
@@ -469,7 +482,7 @@ const performWebFetch = async (url) => {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
 
-        const response = await fetch(`${TOOL_BASE_URL}/fetch?url=${encodeURIComponent(url)}`, {
+        const response = await fetch(requestUrl, {
             method: 'GET',
             signal: controller.signal
         });
@@ -510,9 +523,17 @@ const performPythonSandbox = async (code) => {
     // Clean up code if model accidentally included markdown backticks
     let cleanCode = code.replace(/```python/gi, '').replace(/```/g, '').trim();
     
+    const url = `${TOOL_BASE_URL}/sandbox`;
+    const payload = { code: cleanCode };
+    
     const debugInfo = {
         action: "PYTHON",
-        codeSent: cleanCode,
+        request: {
+            url: url,
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: payload
+        },
         response: null
     };
 
@@ -520,10 +541,10 @@ const performPythonSandbox = async (code) => {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout for execution
 
-        const response = await fetch(`${TOOL_BASE_URL}/sandbox`, {
+        const response = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ code: cleanCode }),
+            body: JSON.stringify(payload),
             signal: controller.signal
         });
         clearTimeout(timeoutId);
