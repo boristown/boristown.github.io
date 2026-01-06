@@ -415,6 +415,12 @@ const appendDarkAGIMessage = (role, text, metrics = null) => {
 const TOOL_BASE_URL = "https://xn--zlvp56j.com";
 
 const performSearch = async (query) => {
+    const debugInfo = {
+        action: "SEARCH",
+        params: { q: query, num_results: 5 },
+        response: null
+    };
+
     try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
@@ -430,19 +436,34 @@ const performSearch = async (query) => {
             signal: controller.signal
         });
         clearTimeout(timeoutId);
+        
+        debugInfo.status = response.status;
+        debugInfo.statusText = response.statusText;
 
         if (!response.ok) throw new Error(`Search API error: ${response.status}`);
         const data = await response.json();
+        debugInfo.response = data;
         
-        if (!data.results || data.results.length === 0) return "未找到相关结果。";
+        if (!data.results || data.results.length === 0) {
+            return { text: "未找到相关结果。", debug: debugInfo };
+        }
         
-        return data.results.map(r => `标题: ${r[0]}\n链接: ${r[1]}`).join('\n\n');
+        const resultText = data.results.map(r => `标题: ${r[0]}\n链接: ${r[1]}`).join('\n\n');
+        return { text: resultText, debug: debugInfo };
+
     } catch (err) {
-        return `搜索失败: ${err.message}`;
+        debugInfo.error = err.message;
+        return { text: `搜索失败: ${err.message}`, debug: debugInfo };
     }
 };
 
 const performWebFetch = async (url) => {
+    const debugInfo = {
+        action: "VISIT",
+        params: { url: url },
+        response: null
+    };
+
     try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
@@ -453,8 +474,11 @@ const performWebFetch = async (url) => {
         });
         clearTimeout(timeoutId);
 
+        debugInfo.status = response.status;
+
         if (!response.ok) throw new Error(`Fetch API error: ${response.status}`);
         const text = await response.text();
+        debugInfo.rawLength = text.length;
         
         // Simple HTML cleanup to extract text content roughly
         const tempDiv = document.createElement('div');
@@ -471,19 +495,29 @@ const performWebFetch = async (url) => {
         cleanText = cleanText.replace(/\s+/g, ' ').trim();
         
         // Truncate to avoid token limits (approx 3000 chars)
-        return cleanText.substring(0, 3000) + (cleanText.length > 3000 ? "\n...(内容过长已截断)" : "");
+        const truncated = cleanText.substring(0, 3000) + (cleanText.length > 3000 ? "\n...(内容过长已截断)" : "");
+        debugInfo.extractedPreview = truncated.substring(0, 200) + "...";
+        
+        return { text: truncated, debug: debugInfo };
     } catch (err) {
-        return `网页读取失败: ${err.message}`;
+        debugInfo.error = err.message;
+        return { text: `网页读取失败: ${err.message}`, debug: debugInfo };
     }
 };
 
 const performPythonSandbox = async (code) => {
+    // Clean up code if model accidentally included markdown backticks
+    let cleanCode = code.replace(/```python/gi, '').replace(/```/g, '').trim();
+    
+    const debugInfo = {
+        action: "PYTHON",
+        codeSent: cleanCode,
+        response: null
+    };
+
     try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout for execution
-
-        // Clean up code if model accidentally included markdown backticks
-        let cleanCode = code.replace(/```python/gi, '').replace(/```/g, '').trim();
 
         const response = await fetch(`${TOOL_BASE_URL}/sandbox`, {
             method: 'POST',
@@ -493,12 +527,15 @@ const performPythonSandbox = async (code) => {
         });
         clearTimeout(timeoutId);
 
+        debugInfo.status = response.status;
+        
         if (!response.ok) throw new Error(`Sandbox API error: ${response.status}`);
         const data = await response.json();
+        debugInfo.response = data;
         
         // Format result based on response
         if (data.timed_out) {
-            return "执行超时 (10s)。";
+            return { text: "执行超时 (10s)。", debug: debugInfo };
         }
         
         let result = "";
@@ -506,10 +543,11 @@ const performPythonSandbox = async (code) => {
         if (data.stderr) result += `[STDERR]\n${data.stderr}\n`;
         if (!data.stdout && !data.stderr) result += "[无输出] (请确保使用了 print 函数)";
         
-        return result.trim();
+        return { text: result.trim(), debug: debugInfo };
 
     } catch (err) {
-        return `代码执行失败: ${err.message}`;
+        debugInfo.error = err.message;
+        return { text: `代码执行失败: ${err.message}`, debug: debugInfo };
     }
 };
 
@@ -540,30 +578,6 @@ const executeAIRequest = async (recursionDepth = 0) => {
         toggleInputState(false);
     }
 
-    // 1. Select a new random model for this specific request
-    let model = null;
-    if (darkAgiState.models && darkAgiState.models.length > 0) {
-        // Only animate on the first turn of a user query, skip animation for tool recursion
-        if (recursionDepth === 0) {
-            model = await selectRandomModelWithAnimation();
-        } else {
-             // Re-use a random model or pick new one quickly without animation
-             const randomM = darkAgiState.models[Math.floor(Math.random() * darkAgiState.models.length)];
-             model = randomM.id;
-             // Update display silently
-             const display = document.getElementById('darkagi-model-display');
-             if(display) {
-                 const name = (randomM.name || randomM.id).replace(':free', '');
-                 display.innerText = name;
-                 display.classList.add("text-cyan-400");
-             }
-        }
-    }
-    
-    if (!model) {
-        model = "meta-llama/llama-3.2-11b-vision-instruct:free"; 
-    }
-
     // Add Loading Indicator
     const loadingId = `loading-${Date.now()}`;
     const loadingDiv = document.createElement('div');
@@ -584,129 +598,180 @@ const executeAIRequest = async (recursionDepth = 0) => {
     container.appendChild(loadingDiv);
     container.scrollTop = container.scrollHeight;
 
-    const requestBody = {
-        "model": model,
-        "messages": darkAgiState.history
-    };
+    // --- MODEL SELECTION & RETRY LOGIC ---
+    let model = null;
+    let success = false;
+    let data = null;
+    let latency = 0;
+    
+    const MAX_RETRIES = 3;
+    let attempt = 0;
 
-    const startTime = Date.now();
-
-    try {
-        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-            method: "POST",
-            headers: {
-                "Authorization": `Bearer ${key}`,
-                "Content-Type": "application/json",
-                "HTTP-Referer": "https://github.com/boristown/DarkAGI", 
-                "X-Title": "BorisTown Toolkits"
-            },
-            body: JSON.stringify(requestBody)
-        });
-
-        const endTime = Date.now();
-        const latency = endTime - startTime;
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw {
-                status: response.status,
-                statusText: response.statusText,
-                responseText: errorText,
-                requestBody: requestBody
-            };
+    // Determine initial model
+    if (darkAgiState.models && darkAgiState.models.length > 0) {
+        if (recursionDepth === 0) {
+            model = await selectRandomModelWithAnimation();
+        } else {
+             // For recursion, just pick one quickly
+             const randomM = darkAgiState.models[Math.floor(Math.random() * darkAgiState.models.length)];
+             model = randomM.id;
         }
+    }
+    if (!model) model = "meta-llama/llama-3.2-11b-vision-instruct:free";
 
-        const data = await response.json();
-        const aiText = data.choices[0]?.message?.content || "";
-        const usage = data.usage || { prompt_tokens: '?', completion_tokens: '?' };
-
-        loadingDiv.remove();
-
-        // --- CHECK FOR TOOL CALLS via TEXT PATTERNS ---
-        const searchMatch = aiText.match(/\[\[SEARCH:\s*(.+?)\]\]/);
-        const visitMatch = aiText.match(/\[\[VISIT:\s*(.+?)\]\]/);
+    // Retry Loop
+    while (attempt <= MAX_RETRIES && !success) {
+        const startTime = Date.now();
+        const requestBody = { "model": model, "messages": darkAgiState.history };
         
-        // Flexible Python matching: Custom tag OR Markdown block
-        let pythonMatch = aiText.match(/\[\[PYTHON:\s*([\s\S]+?)\]\]/); 
-        if (!pythonMatch) {
-            pythonMatch = aiText.match(/```python\s*([\s\S]+?)```/i);
-        }
+        try {
+             // Update loading text if retrying
+             if (attempt > 0) {
+                 const display = document.getElementById('darkagi-model-display');
+                 if (display) {
+                     display.innerText = model.split('/')[1]?.split(':')[0] || model;
+                     display.classList.add("text-yellow-400");
+                 }
+                 const loadingText = document.getElementById(`${loadingId}-text`);
+                 if (loadingText) loadingText.innerText = `请求失败，切换模型重试 (${attempt}/${MAX_RETRIES})...`;
+             }
 
-        if (searchMatch || visitMatch || pythonMatch) {
-            // Push model's request to history
-            darkAgiState.history.push({ role: 'assistant', content: aiText });
-            
-            // UI Feedback for Tool Use
-            const toolMsgDiv = document.createElement('div');
-            toolMsgDiv.className = "flex justify-start w-full mb-4";
-            
-            let toolResult = "";
-            let toolName = "";
+            const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${key}`,
+                    "Content-Type": "application/json",
+                    "HTTP-Referer": "https://github.com/boristown/DarkAGI", 
+                    "X-Title": "BorisTown Toolkits"
+                },
+                body: JSON.stringify(requestBody)
+            });
 
-            if (searchMatch) {
-                const query = searchMatch[1].trim();
-                toolName = `搜索: ${query}`;
-                toolMsgDiv.innerHTML = getToolUiHTML("SEARCH", query);
-                container.appendChild(toolMsgDiv);
-                container.scrollTop = container.scrollHeight;
-                
-                toolResult = await performSearch(query);
+            const endTime = Date.now();
+            latency = endTime - startTime;
 
-            } else if (visitMatch) {
-                const url = visitMatch[1].trim();
-                toolName = `访问: ${url}`;
-                toolMsgDiv.innerHTML = getToolUiHTML("VISIT", url);
-                container.appendChild(toolMsgDiv);
-                container.scrollTop = container.scrollHeight;
-
-                toolResult = await performWebFetch(url);
-
-            } else if (pythonMatch) {
-                const code = pythonMatch[1].trim();
-                toolName = `执行代码 (Python)`;
-                // For Python, we might want to truncate the display if it's too long
-                const displayCode = code.length > 50 ? code.substring(0, 50) + "..." : code;
-                
-                toolMsgDiv.innerHTML = getToolUiHTML("PYTHON", displayCode);
-                container.appendChild(toolMsgDiv);
-                container.scrollTop = container.scrollHeight;
-
-                toolResult = await performPythonSandbox(code);
+            if (!response.ok) {
+                // If it's a 4xx or 5xx error, throw to catch block to trigger retry
+                const errorText = await response.text();
+                throw { status: response.status, responseText: errorText, requestBody };
             }
 
-            // Update UI to show "Done"
-            toolMsgDiv.innerHTML = getToolUiHTML("DONE", toolName, true);
+            data = await response.json();
+            success = true;
 
-            // Add result to history as System observation
-            const observation = `[系统工具返回结果]:\n${toolResult}`;
-            darkAgiState.history.push({ role: 'system', content: observation });
+        } catch (err) {
+            attempt++;
+            console.warn(`Attempt ${attempt} failed with model ${model}.`, err);
 
-            // Recursive Call
-            await executeAIRequest(recursionDepth + 1);
-
-        } else {
-            // Normal response, final answer
-            appendDarkAGIMessage('assistant', aiText || "无内容返回。", {
-                model: model,
-                input: usage.prompt_tokens,
-                output: usage.completion_tokens,
-                time: latency
-            });
+            if (attempt > MAX_RETRIES) {
+                // Final failure
+                loadingDiv.remove();
+                handleError(err, container);
+                darkAgiState.loading = false;
+                toggleInputState(true);
+                return; // Exit
+            }
             
-            darkAgiState.loading = false;
-            toggleInputState(true);
+            // Pick a NEW random model for next attempt
+            if (darkAgiState.models && darkAgiState.models.length > 0) {
+                const randomM = darkAgiState.models[Math.floor(Math.random() * darkAgiState.models.length)];
+                model = randomM.id;
+            }
+        }
+    }
+
+    // --- PROCESS SUCCESSFUL RESPONSE ---
+    
+    // Restore Model Display Color
+    const display = document.getElementById('darkagi-model-display');
+    if (display) display.classList.remove("text-yellow-400");
+
+    const aiText = data.choices[0]?.message?.content || "";
+    const usage = data.usage || { prompt_tokens: '?', completion_tokens: '?' };
+    
+    loadingDiv.remove();
+
+    // --- CHECK FOR TOOL CALLS via TEXT PATTERNS ---
+    const searchMatch = aiText.match(/\[\[SEARCH:\s*(.+?)\]\]/);
+    const visitMatch = aiText.match(/\[\[VISIT:\s*(.+?)\]\]/);
+    
+    // Flexible Python matching: Custom tag OR Markdown block
+    let pythonMatch = aiText.match(/\[\[PYTHON:\s*([\s\S]+?)\]\]/); 
+    if (!pythonMatch) {
+        pythonMatch = aiText.match(/```python\s*([\s\S]+?)```/i);
+    }
+
+    if (searchMatch || visitMatch || pythonMatch) {
+        // Push model's request to history
+        darkAgiState.history.push({ role: 'assistant', content: aiText });
+        
+        // UI Feedback for Tool Use
+        const toolMsgDiv = document.createElement('div');
+        toolMsgDiv.className = "flex justify-start w-full mb-4";
+        
+        let toolResult = { text: "", debug: null };
+        let toolName = "";
+        let toolType = "";
+
+        if (searchMatch) {
+            const query = searchMatch[1].trim();
+            toolName = `搜索: ${query}`;
+            toolType = "SEARCH";
+            toolMsgDiv.innerHTML = getToolUiHTML(toolType, query);
+            container.appendChild(toolMsgDiv);
+            container.scrollTop = container.scrollHeight;
+            
+            toolResult = await performSearch(query);
+
+        } else if (visitMatch) {
+            const url = visitMatch[1].trim();
+            toolName = `访问: ${url}`;
+            toolType = "VISIT";
+            toolMsgDiv.innerHTML = getToolUiHTML(toolType, url);
+            container.appendChild(toolMsgDiv);
+            container.scrollTop = container.scrollHeight;
+
+            toolResult = await performWebFetch(url);
+
+        } else if (pythonMatch) {
+            const code = pythonMatch[1].trim();
+            toolName = `执行代码 (Python)`;
+            toolType = "PYTHON";
+            // For Python, we might want to truncate the display if it's too long
+            const displayCode = code.length > 50 ? code.substring(0, 50) + "..." : code;
+            
+            toolMsgDiv.innerHTML = getToolUiHTML(toolType, displayCode);
+            container.appendChild(toolMsgDiv);
+            container.scrollTop = container.scrollHeight;
+
+            toolResult = await performPythonSandbox(code);
         }
 
-    } catch (err) {
-        console.error(err);
-        loadingDiv.remove();
-        handleError(err, container);
+        // Update UI to show "Done" with DEBUG info
+        toolMsgDiv.innerHTML = getToolUiHTML("DONE", toolName, true, toolResult.debug);
+
+        // Add result to history as System observation
+        const observation = `[系统工具返回结果]:\n${toolResult.text}`;
+        darkAgiState.history.push({ role: 'system', content: observation });
+
+        // Recursive Call
+        await executeAIRequest(recursionDepth + 1);
+
+    } else {
+        // Normal response, final answer
+        appendDarkAGIMessage('assistant', aiText || "无内容返回。", {
+            model: model,
+            input: usage.prompt_tokens,
+            output: usage.completion_tokens,
+            time: latency
+        });
+        
         darkAgiState.loading = false;
         toggleInputState(true);
     }
 };
 
-const getToolUiHTML = (type, content, isDone = false) => {
+const getToolUiHTML = (type, content, isDone = false, debugData = null) => {
     let icon = '';
     let statusText = '';
     
@@ -719,19 +784,40 @@ const getToolUiHTML = (type, content, isDone = false) => {
     } else if (type === "PYTHON") {
         icon = '<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>';
         statusText = "正在执行代码...";
-    }
-
-    if (isDone) {
+    } else if (type === "DONE") {
+        // Use a generic check icon for DONE
+        icon = '<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>';
         statusText = "工具调用完成";
     }
 
     const colorClass = isDone ? "text-slate-500 border-slate-700 bg-slate-900/50" : "text-cyan-400 border-cyan-500/30 bg-cyan-950/30 animate-pulse";
     
+    let debugHtml = '';
+    if (debugData) {
+        const debugJson = JSON.stringify(debugData, null, 2);
+        // Clean up JSON for display to avoid too much scrolling
+        // e.g. truncate long response fields if necessary, but user asked for full output.
+        // We'll rely on CSS overflow-auto.
+        debugHtml = `
+            <div class="mt-2 pt-2 border-t border-slate-700/50 w-full">
+                <details class="group">
+                    <summary class="text-[10px] text-slate-500 cursor-pointer hover:text-cyan-400 select-none font-mono list-none flex items-center">
+                        <span class="mr-2 transform group-open:rotate-90 transition-transform">▶</span> 调试数据 (DEBUG I/O)
+                    </summary>
+                    <pre class="mt-2 p-2 bg-slate-950/80 rounded text-[10px] font-mono text-slate-400 overflow-x-auto border border-slate-800/50 whitespace-pre-wrap max-h-60 custom-scrollbar">${debugJson}</pre>
+                </details>
+            </div>
+        `;
+    }
+
     return `
-        <div class="flex items-center space-x-3 px-4 py-2 rounded-lg border ${colorClass} text-xs font-mono max-w-[85%]">
-            ${icon}
-            <span class="truncate max-w-[200px] font-mono">${content}</span>
-            <span class="opacity-50 border-l border-current pl-3 ml-1">${statusText}</span>
+        <div class="flex flex-col items-start space-y-1 px-4 py-2 rounded-lg border ${colorClass} text-xs font-mono max-w-[85%] w-fit">
+            <div class="flex items-center space-x-3 w-full">
+                <div class="shrink-0">${icon}</div>
+                <span class="truncate max-w-[200px] font-mono">${content}</span>
+                <span class="opacity-50 border-l border-current pl-3 ml-1 whitespace-nowrap">${statusText}</span>
+            </div>
+            ${debugHtml}
         </div>
     `;
 }
