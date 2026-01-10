@@ -338,22 +338,34 @@ const appendToolRequestMessage = (type, content) => {
 
     let title = "工具调用";
     let colorClass = "border-amber-500/50 bg-amber-950/20 text-amber-200";
+    let isCode = false;
     
     if (type === "JS_AGENT") {
         title = "沙盒计算执行中 (JS)";
         colorClass = "border-cyan-500/50 bg-cyan-950/20 text-cyan-200";
+        isCode = true;
     }
+
+    const toolContentHtml = isCode 
+        ? `<pre class="language-javascript"><code class="language-javascript">${content}</code></pre>`
+        : content;
 
     div.innerHTML = `
         <div class="rounded-2xl rounded-tl-none border ${colorClass} px-5 py-4 max-w-[85%] min-w-[300px] shadow-lg relative overflow-hidden">
             <div class="flex items-center space-x-2 mb-2 pb-2 border-b border-white/10">
                 <h4 class="font-bold text-sm tracking-wide uppercase font-mono">${title}</h4>
             </div>
-            <div class="bg-black/30 rounded p-3 font-mono text-xs break-all whitespace-pre-wrap border border-white/5">${content}</div>
+            <div class="tool-content bg-black/30 rounded p-3 font-mono text-xs break-all whitespace-pre-wrap border border-white/5">${toolContentHtml}</div>
         </div>
     `;
 
     container.appendChild(div);
+    
+    if (isCode && typeof Prism !== 'undefined') {
+        const codeElement = div.querySelector('code');
+        if (codeElement) Prism.highlightElement(codeElement);
+    }
+
     container.scrollTop = container.scrollHeight;
     darkAgiState.history.push({ role: 'assistant', content: `[[${type}: ${content}]]` });
 };
@@ -366,14 +378,14 @@ const runLocalSandbox = async (code) => {
     
     try {
         // Simple BigInt math utility pre-injection
-        const fullCode = `
+        const factorialCode = `
             const factorial = (n) => {
                 let res = 1n;
                 for (let i = 2n; i <= BigInt(n); i++) res *= i;
                 return res;
             };
-            ${code}
         `;
+        const fullCode = factorialCode + "\n" + code;
         const fn = new Function(fullCode);
         const result = fn();
         if (result !== undefined) output += `Result: ${result}`;
