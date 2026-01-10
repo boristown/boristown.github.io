@@ -80,7 +80,7 @@
     <!-- Background Grid Effect -->
     <div class="fixed inset-0 pointer-events-none z-0 opacity-20 bg-grid-pattern bg-grid"></div>
 
-    <!-- Header -->
+    <!-- Header (Hidden in DarkAGI Mode) -->
     <header id="global-header" class="w-full bg-tech-bg/80 backdrop-blur-md border-b border-slate-800 py-4 sticky top-0 z-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center">
             <a href="#" class="flex items-center space-x-3 group relative">
@@ -110,10 +110,15 @@
     <!-- Main Content Area -->
     <main class="flex-grow flex flex-col items-center justify-start p-4 sm:p-8 w-full z-10">
         
-        <!-- VIEW: LANDING PAGE (Home) -->
-        <div id="view-home" class="w-full max-w-6xl mx-auto transition-opacity duration-300 flex flex-col gap-8">
+        <!-- VIEW: LANDING PAGE (Apps Selection) -->
+        <div id="view-home" class="hidden w-full max-w-6xl mx-auto transition-opacity duration-300 flex flex-col gap-8">
             
-            <!-- HERO: DarkAGI Card (Moved to Top) -->
+            <div class="text-center mb-4">
+                <h2 class="text-3xl font-bold text-white tracking-tight">应用中心</h2>
+                <p class="text-slate-400 text-sm font-mono mt-2">选择要启动的神经网格模块</p>
+            </div>
+
+            <!-- HERO: DarkAGI Card -->
             <a href="#darkagi" class="group relative w-full bg-slate-900/50 backdrop-blur-sm rounded-3xl border border-indigo-500/30 hover:border-indigo-500 transition-all duration-300 overflow-hidden min-h-[220px] flex flex-col md:flex-row shadow-2xl shadow-indigo-900/20 hover:shadow-indigo-500/20">
                 <!-- Background Accent -->
                 <div class="absolute inset-0 bg-gradient-to-r from-indigo-600/10 to-transparent opacity-50 group-hover:opacity-100 transition-opacity"></div>
@@ -124,18 +129,18 @@
                     <div class="flex items-center space-x-3 mb-4">
                         <div class="px-3 py-1 bg-indigo-500/20 border border-indigo-500/50 rounded-full text-indigo-300 text-xs font-mono font-bold tracking-wider flex items-center">
                             <span class="w-1.5 h-1.5 bg-indigo-400 rounded-full mr-2 animate-pulse"></span>
-                            AI 接口
+                            旗舰应用
                         </div>
-                        <span class="text-slate-500 text-xs font-mono">OpenRouter API</span>
                     </div>
                     <h2 class="text-4xl font-bold text-white mb-3 tracking-tight group-hover:text-indigo-100 transition-colors">
                         暗黑AGI <span class="text-indigo-500">控制台</span>
                     </h2>
                     <p class="text-slate-400 text-lg max-w-xl leading-relaxed">
-                        通过 OpenRouter 免费层网格即时访问 LLM 模型。支持本地密钥存储，安全无忧。
+                        您的个人 AI 助手。支持工具调用、联网模拟与代码辅助。<br>
+                        <span class="text-xs opacity-70">默认启动应用</span>
                     </p>
                     <div class="mt-6 flex items-center text-sm font-medium text-indigo-400 group-hover:text-indigo-300">
-                        初始化终端 <span class="ml-2 group-hover:translate-x-1 transition-transform">→</span>
+                        进入系统 <span class="ml-2 group-hover:translate-x-1 transition-transform">→</span>
                     </div>
                 </div>
 
@@ -169,12 +174,6 @@
                              AI 数学奥林匹克竞赛的分析与资源聚合。
                         </p>
                     </div>
-                    <div class="px-8 py-4 bg-slate-950/30 border-t border-slate-800 w-full flex justify-between items-center">
-                        <span class="text-[10px] font-mono font-bold text-slate-500 uppercase tracking-wider">Kaggle 监控</span>
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-slate-600 group-hover:text-cyan-400 group-hover:translate-x-1 transition-all">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
-                        </svg>
-                    </div>
                 </a>
 
                 <!-- Card 3: RevDecoder -->
@@ -194,12 +193,6 @@
                             Base64 逆向转 ZIP 转换器。
                         </p>
                     </div>
-                    <div class="px-8 py-4 bg-slate-950/30 border-t border-slate-800 w-full flex justify-between items-center">
-                        <span class="text-[10px] font-mono font-bold text-slate-500 uppercase tracking-wider">安全工具</span>
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-slate-600 group-hover:text-emerald-400 group-hover:translate-x-1 transition-all">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
-                        </svg>
-                    </div>
                 </a>
 
             </div>
@@ -209,7 +202,7 @@
         <div id="view-tool" class="hidden w-full flex flex-col items-center" style="display: none;">
             
             <div class="w-full max-w-4xl mx-auto mb-6 flex items-center">
-                <a href="#" class="text-xs font-mono text-slate-500 hover:text-white transition-colors flex items-center">
+                <a href="#home" class="text-xs font-mono text-slate-500 hover:text-white transition-colors flex items-center">
                     <span class="mr-2">←</span> 返回中心
                 </a>
             </div>
@@ -312,7 +305,7 @@
             
             <!-- Breadcrumb -->
             <div class="mb-6 flex items-center justify-between">
-                <a href="#" class="text-xs font-mono text-slate-500 hover:text-white transition-colors flex items-center">
+                <a href="#home" class="text-xs font-mono text-slate-500 hover:text-white transition-colors flex items-center">
                     <span class="mr-2">←</span> 返回中心
                 </a>
                 <span class="inline-flex items-center px-3 py-1 rounded border border-green-500/30 bg-green-900/20 text-green-400 text-xs font-mono">
@@ -415,16 +408,13 @@
         </div>
 
         <!-- VIEW: DARKAGI (Actual App) -->
-        <div id="view-darkagi" class="hidden fixed inset-0 z-50 w-full h-full bg-slate-900" style="display: none;">
+        <div id="view-darkagi" class="fixed inset-0 z-50 w-full h-full bg-slate-900 flex flex-col">
             
             <div class="flex flex-col w-full h-full bg-slate-900 overflow-hidden">
                 <!-- Header -->
                 <div class="bg-slate-950/50 border-b border-slate-800 p-4 flex items-center justify-between shrink-0 z-10">
                     <div class="flex items-center space-x-3">
-                        <a href="#" class="text-slate-500 hover:text-white transition-colors p-2 rounded-lg hover:bg-slate-800">
-                             <span class="text-xs font-mono">← 退出</span>
-                        </a>
-                        <div class="flex items-center space-x-3 pl-4 border-l border-slate-800">
+                        <div class="flex items-center space-x-3 pl-2">
                             <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-indigo-900/50">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" />
@@ -480,8 +470,8 @@
                 </div>
 
                 <!-- Input Area -->
-                <div class="p-4 bg-slate-950 border-t border-slate-800 shrink-0">
-                    <form id="darkagi-form" class="relative flex items-end gap-2 max-w-4xl mx-auto">
+                <div class="p-4 bg-slate-950 border-t border-slate-800 shrink-0 flex flex-col items-center">
+                    <form id="darkagi-form" class="relative flex items-end gap-2 max-w-4xl w-full mx-auto">
                         <div class="relative flex-grow group">
                             <div class="absolute -inset-0.5 bg-gradient-to-r from-indigo-500 to-cyan-500 rounded-xl opacity-20 group-focus-within:opacity-100 transition duration-500 blur-sm"></div>
                             <textarea 
@@ -499,7 +489,16 @@
                             </svg>
                         </button>
                     </form>
-                    <div class="text-center mt-3">
+                    
+                    <div class="mt-4 flex items-center justify-between w-full max-w-4xl px-2">
+                        <a href="#home" class="flex items-center space-x-2 text-slate-500 hover:text-white transition-colors group">
+                            <div class="p-1.5 rounded-md bg-slate-900 border border-slate-700 group-hover:border-slate-500 group-hover:bg-slate-800">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                                  <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z" />
+                                </svg>
+                            </div>
+                            <span class="text-xs font-mono font-bold tracking-wide">其它应用</span>
+                        </a>
                         <p class="text-[10px] text-slate-600 font-mono">
                             加密::客户端 // OPENROUTER-免费层
                         </p>

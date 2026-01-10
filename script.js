@@ -146,7 +146,7 @@ const getStoredKey = () => localStorage.getItem(STORAGE_KEY);
 const setStoredKey = (key) => localStorage.setItem(STORAGE_KEY, key);
 const clearStoredKey = () => localStorage.removeItem(STORAGE_KEY);
 
-// Updated System Prompt Generator with Date/Time
+// Updated System Prompt Generator with Date/Time and "Human-in-the-loop" instructions
 const getSystemPrompt = () => {
     const now = new Date();
     const dateStr = now.toLocaleDateString('zh-CN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -157,30 +157,34 @@ const getSystemPrompt = () => {
         content: `你的名字叫做暗黑AGI，英文名DarkAGI。请使用中文与用户对话。
 当前时间：${dateStr} ${timeStr}
 
-你拥有联网能力和 Python 代码执行沙箱。
+你本身**没有互联网访问权限**，也**无法直接执行代码**。
+但是，你可以通过**请求用户协助**来完成这些任务。
 
-当需要进行精确数学计算、数据处理、算法验证或获取不到信息时，请使用工具。
+当需要获取外部信息、执行计算或查看网页时，请输出特定的工具请求标签。系统会自动将其转换为用户可见的请求卡片。
 
-指令格式（严格遵守）：
+工具请求格式（严格遵守）：
 
-1. 搜索网络：
+1. 请求用户搜索网络：
 [[SEARCH: 搜索关键词]]
+（适用场景：查询实时新闻、数据、事实）
 
-2. 阅读网页：
+2. 请求用户查看网页：
 [[VISIT: 网址]]
+（适用场景：读取特定链接的内容）
 
-3. 运行 Python 代码：
+3. 请求用户运行 Python 代码：
 [[PYTHON: 代码内容]]
 或者直接输出 Python 代码块：
 \`\`\`python
-print("必须使用 print 函数输出结果")
+print("Hello World")
 \`\`\`
+（适用场景：复杂数学计算、数据处理、算法验证）
 
 注意事项：
-- Python 代码**必须**使用 \`print()\` 将结果输出到标准输出(stdout)，否则无法获取结果。
-- 优先使用 [[PYTHON: ...]] 格式以减少 Token 消耗，但标准的 Markdown 代码块也能被识别执行。
+- 发出请求后，请等待用户提供结果。
+- 不要尝试自己编造搜索结果或代码运行结果。
 - 每次回复优先输出一个主要指令。
-- 遇到错误不要死循环重试，请尝试改变方法或告知用户。`
+`
     };
 };
 
@@ -410,222 +414,65 @@ const appendDarkAGIMessage = (role, text, metrics = null) => {
     }
 };
 
-// --- TOOL FUNCTIONS (RAG & SANDBOX) ---
+const appendToolRequestMessage = (type, content) => {
+    const container = document.getElementById('darkagi-chat-container');
+    const div = document.createElement('div');
+    div.className = "flex justify-start w-full mb-4";
 
-const TOOL_BASE_URL = "https://xn--zlvp56j.com";
-// Use CodeTabs as alternative proxy since corsproxy.io was problematic for user
-const CORS_PROXY = "https://api.codetabs.com/v1/proxy?quest=";
-
-const performSearch = async (query) => {
-    const targetUrl = `${TOOL_BASE_URL}/search`;
-    const proxyUrl = `${CORS_PROXY}${targetUrl}`;
+    let title = "";
+    let desc = "";
+    let icon = "";
+    let colorClass = "border-amber-500/50 bg-amber-950/20 text-amber-200";
+    let iconClass = "text-amber-500";
     
-    const payload = {
-        q: query,
-        num_result: 5
-    };
-    
-    const debugInfo = {
-        action: "SEARCH",
-        request: {
-            url: proxyUrl,
-            originalUrl: targetUrl,
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: payload
-        },
-        response: null
-    };
-
-    try {
-        const controller = new AbortController();
-        // Increase timeout to 60 seconds
-        const timeoutId = setTimeout(() => controller.abort(), 60000); 
-
-        const response = await fetch(proxyUrl, {
-            method: 'POST',
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(payload),
-            signal: controller.signal
-        });
-        clearTimeout(timeoutId);
-        
-        debugInfo.status = response.status;
-        debugInfo.statusText = response.statusText;
-
-        if (!response.ok) throw new Error(`Search API error: ${response.status} ${response.statusText}`);
-        const data = await response.json();
-        debugInfo.response = data;
-        
-        if (!data.results || data.results.length === 0) {
-            return { text: "未找到相关结果。", debug: debugInfo };
-        }
-        
-        const resultText = data.results.map(r => `标题: ${r[0]}\n链接: ${r[1]}`).join('\n\n');
-        return { text: resultText, debug: debugInfo };
-
-    } catch (err) {
-        debugInfo.error = err.message;
-        debugInfo.errorType = err.name;
-        
-        if (err.name === 'AbortError') {
-             return { text: `搜索请求超时 (60s)。请检查网络状况。`, debug: debugInfo };
-        }
-        
-        if (err.message === 'Failed to fetch') {
-             debugInfo.possibleCauses = [
-                 "CORS 跨域限制 (当前使用 CodeTabs 代理尝试绕过)",
-                 "目标服务器 SSL 证书无效 (代理服务器可能拒绝连接)",
-                 "网络连接中断"
-             ];
-             return { text: `网络请求失败 (Failed to fetch)。\n已尝试使用代理绕过 CORS，但可能因目标服务器证书问题被拦截。\n建议：检查目标服务器 SSL 配置。`, debug: debugInfo };
-        }
-
-        return { text: `搜索失败: ${err.message}`, debug: debugInfo };
+    if (type === "SEARCH") {
+        title = "搜索工具调用请求";
+        desc = "请将以下关键字输入 google/bing/baidu 搜索引擎，然后将搜索结果复制给我。";
+        icon = '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>';
+    } else if (type === "PYTHON") {
+        title = "代码执行请求";
+        desc = "请使用 python3 执行以下代码，然后将控制台的输出结果或错误信息复制给我。";
+        colorClass = "border-blue-500/50 bg-blue-950/20 text-blue-200";
+        iconClass = "text-blue-500";
+        icon = '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>';
+    } else if (type === "VISIT") {
+        title = "网页查看请求";
+        desc = "请打开以下网址，然后将主页面的内容复制给我。";
+        colorClass = "border-emerald-500/50 bg-emerald-950/20 text-emerald-200";
+        iconClass = "text-emerald-500";
+        icon = '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>';
     }
+
+    div.innerHTML = `
+        <div class="rounded-2xl rounded-tl-none border ${colorClass} px-5 py-4 max-w-[85%] min-w-[300px] shadow-lg relative overflow-hidden">
+            <div class="absolute top-0 right-0 p-2 opacity-10">
+                <svg class="w-16 h-16" fill="currentColor" viewBox="0 0 24 24"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            </div>
+            <div class="flex items-center space-x-2 mb-2 pb-2 border-b border-white/10">
+                <div class="${iconClass}">${icon}</div>
+                <h4 class="font-bold text-sm tracking-wide">${title}</h4>
+            </div>
+            <p class="text-xs mb-3 opacity-80 font-mono">${desc}</p>
+            <div class="bg-black/30 rounded p-3 font-mono text-xs break-all whitespace-pre-wrap select-all border border-white/5">${content}</div>
+        </div>
+    `;
+
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+    
+    // Log system event
+    darkAgiState.history.push({ 
+        role: 'assistant', 
+        content: `[系统已向用户展示工具请求: ${type}] ${content}`
+    });
 };
 
-const performWebFetch = async (url) => {
-    const targetUrl = `${TOOL_BASE_URL}/fetch?url=${encodeURIComponent(url)}`;
-    const proxyUrl = `${CORS_PROXY}${targetUrl}`;
-    
-    const debugInfo = {
-        action: "VISIT",
-        request: {
-            url: proxyUrl,
-            originalUrl: targetUrl,
-            method: "GET"
-        },
-        response: null
-    };
-
-    try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 60000); 
-
-        const response = await fetch(proxyUrl, {
-            method: 'GET',
-            signal: controller.signal
-        });
-        clearTimeout(timeoutId);
-
-        debugInfo.status = response.status;
-
-        if (!response.ok) throw new Error(`Fetch API error: ${response.status} ${response.statusText}`);
-        const text = await response.text();
-        debugInfo.rawLength = text.length;
-        
-        // Simple HTML cleanup to extract text content roughly
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = text;
-        
-        // Remove scripts and styles
-        const scripts = tempDiv.getElementsByTagName('script');
-        for (let i = scripts.length - 1; i >= 0; i--) scripts[i].parentNode.removeChild(scripts[i]);
-        const styles = tempDiv.getElementsByTagName('style');
-        for (let i = styles.length - 1; i >= 0; i--) styles[i].parentNode.removeChild(styles[i]);
-        
-        let cleanText = tempDiv.textContent || tempDiv.innerText || "";
-        // Collapse whitespace
-        cleanText = cleanText.replace(/\s+/g, ' ').trim();
-        
-        // Truncate to avoid token limits (approx 3000 chars)
-        const truncated = cleanText.substring(0, 3000) + (cleanText.length > 3000 ? "\n...(内容过长已截断)" : "");
-        debugInfo.extractedPreview = truncated.substring(0, 200) + "...";
-        
-        return { text: truncated, debug: debugInfo };
-    } catch (err) {
-        debugInfo.error = err.message;
-        debugInfo.errorType = err.name;
-
-        if (err.name === 'AbortError') {
-             return { text: `网页读取请求超时 (60s)。`, debug: debugInfo };
-        }
-
-        if (err.message === 'Failed to fetch') {
-             debugInfo.possibleCauses = ["CORS/SSL 错误 (代理失败)", "网络不通"];
-             return { text: `网页读取网络错误 (Failed to fetch)。\n请在浏览器控制台查看详细原因。`, debug: debugInfo };
-        }
-        
-        return { text: `网页读取失败: ${err.message}`, debug: debugInfo };
-    }
-};
-
-const performPythonSandbox = async (code) => {
-    // Clean up code if model accidentally included markdown backticks
-    let cleanCode = code.replace(/```python/gi, '').replace(/```/g, '').trim();
-    
-    const targetUrl = `${TOOL_BASE_URL}/sandbox`;
-    const proxyUrl = `${CORS_PROXY}${targetUrl}`;
-
-    const payload = { code: cleanCode };
-    
-    const debugInfo = {
-        action: "PYTHON",
-        request: {
-            url: proxyUrl,
-            originalUrl: targetUrl,
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: payload
-        },
-        response: null
-    };
-
-    try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout for execution
-
-        const response = await fetch(proxyUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-            signal: controller.signal
-        });
-        clearTimeout(timeoutId);
-
-        debugInfo.status = response.status;
-        
-        if (!response.ok) throw new Error(`Sandbox API error: ${response.status} ${response.statusText}`);
-        const data = await response.json();
-        debugInfo.response = data;
-        
-        // Format result based on response
-        if (data.timed_out) {
-            return { text: "执行超时 (Server Side Timeout)。", debug: debugInfo };
-        }
-        
-        let result = "";
-        if (data.stdout) result += `[STDOUT]\n${data.stdout}\n`;
-        if (data.stderr) result += `[STDERR]\n${data.stderr}\n`;
-        if (!data.stdout && !data.stderr) result += "[无输出] (请确保使用了 print 函数)";
-        
-        return { text: result.trim(), debug: debugInfo };
-
-    } catch (err) {
-        debugInfo.error = err.message;
-        debugInfo.errorType = err.name;
-
-        if (err.name === 'AbortError') {
-             return { text: `代码执行请求超时 (60s)。`, debug: debugInfo };
-        }
-
-        if (err.message === 'Failed to fetch') {
-             debugInfo.possibleCauses = ["CORS/SSL 错误 (代理失败)", "网络不通"];
-             return { text: `代码沙箱连接失败 (Failed to fetch)。\n请在浏览器控制台查看详细原因。`, debug: debugInfo };
-        }
-
-        return { text: `代码执行失败: ${err.message}`, debug: debugInfo };
-    }
-};
 
 // Extracted Core Logic for reuse (Retry & Recursive Tool Use)
 const executeAIRequest = async (recursionDepth = 0) => {
     // Prevent infinite loops
     if (recursionDepth > 5) {
-        appendDarkAGIMessage('assistant', "错误：工具调用深度过大，已终止。");
+        appendDarkAGIMessage('assistant', "错误：对话轮次过深，已终止。");
         darkAgiState.loading = false;
         toggleInputState(true);
         return;
@@ -772,60 +619,47 @@ const executeAIRequest = async (recursionDepth = 0) => {
     }
 
     if (searchMatch || visitMatch || pythonMatch) {
-        // Push model's request to history
-        darkAgiState.history.push({ role: 'assistant', content: aiText });
+        // Push model's thought/request to history context first
+        // Note: We do NOT display the raw "[[SEARCH...]]" text to user, we display the UI Card instead.
+        // But we keep it in history so the model knows what it asked.
         
-        // UI Feedback for Tool Use
-        const toolMsgDiv = document.createElement('div');
-        toolMsgDiv.className = "flex justify-start w-full mb-4";
+        // However, to keep chat flow natural, we can add the raw response to history
+        // BUT we intercept the UI rendering for the tool part.
         
-        let toolResult = { text: "", debug: null };
-        let toolName = "";
-        let toolType = "";
+        // Actually, let's display what the model said (so user sees context) 
+        // AND then append the tool card.
+        
+        // Remove the tool command from the text displayed to user to avoid redundancy?
+        // Let's just render the tool card INSTEAD of the text if the text is ONLY the command.
+        
+        const isPureCommand = aiText.trim().startsWith('[[') || aiText.trim().startsWith('```python');
+        
+        if (!isPureCommand) {
+             appendDarkAGIMessage('assistant', aiText, {
+                model: model,
+                input: usage.prompt_tokens,
+                output: usage.completion_tokens,
+                time: latency
+            });
+        } else {
+             // Just log it in history, don't show bubble yet (Card will be shown)
+             darkAgiState.history.push({ role: 'assistant', content: aiText });
+        }
 
         if (searchMatch) {
             const query = searchMatch[1].trim();
-            toolName = `搜索: ${query}`;
-            toolType = "SEARCH";
-            toolMsgDiv.innerHTML = getToolUiHTML(toolType, query);
-            container.appendChild(toolMsgDiv);
-            container.scrollTop = container.scrollHeight;
-            
-            toolResult = await performSearch(query);
-
+            appendToolRequestMessage("SEARCH", query);
         } else if (visitMatch) {
             const url = visitMatch[1].trim();
-            toolName = `访问: ${url}`;
-            toolType = "VISIT";
-            toolMsgDiv.innerHTML = getToolUiHTML(toolType, url);
-            container.appendChild(toolMsgDiv);
-            container.scrollTop = container.scrollHeight;
-
-            toolResult = await performWebFetch(url);
-
+            appendToolRequestMessage("VISIT", url);
         } else if (pythonMatch) {
             const code = pythonMatch[1].trim();
-            toolName = `执行代码 (Python)`;
-            toolType = "PYTHON";
-            // For Python, we might want to truncate the display if it's too long
-            const displayCode = code.length > 50 ? code.substring(0, 50) + "..." : code;
-            
-            toolMsgDiv.innerHTML = getToolUiHTML(toolType, displayCode);
-            container.appendChild(toolMsgDiv);
-            container.scrollTop = container.scrollHeight;
-
-            toolResult = await performPythonSandbox(code);
+            appendToolRequestMessage("PYTHON", code);
         }
 
-        // Update UI to show "Done" with DEBUG info
-        toolMsgDiv.innerHTML = getToolUiHTML("DONE", toolName, true, toolResult.debug);
-
-        // Add result to history as System observation
-        const observation = `[系统工具返回结果]:\n${toolResult.text}`;
-        darkAgiState.history.push({ role: 'system', content: observation });
-
-        // Recursive Call
-        await executeAIRequest(recursionDepth + 1);
+        // STOP HERE. Wait for user input.
+        darkAgiState.loading = false;
+        toggleInputState(true);
 
     } else {
         // Normal response, final answer
@@ -840,57 +674,6 @@ const executeAIRequest = async (recursionDepth = 0) => {
         toggleInputState(true);
     }
 };
-
-const getToolUiHTML = (type, content, isDone = false, debugData = null) => {
-    let icon = '';
-    let statusText = '';
-    
-    if (type === "SEARCH") {
-        icon = '<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>';
-        statusText = "正在搜索网络...";
-    } else if (type === "VISIT") {
-        icon = '<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>';
-        statusText = "正在读取网页...";
-    } else if (type === "PYTHON") {
-        icon = '<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>';
-        statusText = "正在执行代码...";
-    } else if (type === "DONE") {
-        // Use a generic check icon for DONE
-        icon = '<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>';
-        statusText = "工具调用完成";
-    }
-
-    const colorClass = isDone ? "text-slate-500 border-slate-700 bg-slate-900/50" : "text-cyan-400 border-cyan-500/30 bg-cyan-950/30 animate-pulse";
-    
-    let debugHtml = '';
-    if (debugData) {
-        const debugJson = JSON.stringify(debugData, null, 2);
-        // Clean up JSON for display to avoid too much scrolling
-        // e.g. truncate long response fields if necessary, but user asked for full output.
-        // We'll rely on CSS overflow-auto.
-        debugHtml = `
-            <div class="mt-2 pt-2 border-t border-slate-700/50 w-full">
-                <details class="group">
-                    <summary class="text-[10px] text-slate-500 cursor-pointer hover:text-cyan-400 select-none font-mono list-none flex items-center">
-                        <span class="mr-2 transform group-open:rotate-90 transition-transform">▶</span> 调试数据 (DEBUG I/O)
-                    </summary>
-                    <pre class="mt-2 p-2 bg-slate-950/80 rounded text-[10px] font-mono text-slate-400 overflow-x-auto border border-slate-800/50 whitespace-pre-wrap max-h-60 custom-scrollbar">${debugJson}</pre>
-                </details>
-            </div>
-        `;
-    }
-
-    return `
-        <div class="flex flex-col items-start space-y-1 px-4 py-2 rounded-lg border ${colorClass} text-xs font-mono max-w-[85%] w-fit">
-            <div class="flex items-center space-x-3 w-full">
-                <div class="shrink-0">${icon}</div>
-                <span class="truncate max-w-[200px] font-mono">${content}</span>
-                <span class="opacity-50 border-l border-current pl-3 ml-1 whitespace-nowrap">${statusText}</span>
-            </div>
-            ${debugHtml}
-        </div>
-    `;
-}
 
 const toggleInputState = (enabled) => {
     const btn = document.getElementById('darkagi-send-btn');
@@ -1031,12 +814,16 @@ const setViewVisibility = (id, isVisible) => {
 };
 
 const handleRoute = () => {
-    const hash = window.location.hash.replace('#/', '#');
+    let hash = window.location.hash.replace('#/', '#');
+    // Default to DarkAGI if no hash is present
+    if (!hash || hash === '#') {
+        hash = '#darkagi';
+    }
     
     const isTool = hash === '#base64';
     const isAimo = hash === '#aimo';
     const isDarkAgi = hash === '#darkagi';
-    const isHome = !isTool && !isAimo && !isDarkAgi;
+    const isHome = hash === '#home'; // Explicit home route
 
     setViewVisibility('view-home', isHome);
     setViewVisibility('view-tool', isTool);
@@ -1047,7 +834,9 @@ const handleRoute = () => {
     const globalHeader = document.getElementById('global-header');
     const globalFooter = document.getElementById('global-footer');
     
+    // Header is only visible in non-fullscreen apps (not DarkAGI)
     if (globalHeader) globalHeader.style.display = isDarkAgi ? 'none' : '';
+    // Footer is only visible in non-fullscreen apps
     if (globalFooter) globalFooter.style.display = isDarkAgi ? 'none' : '';
 
     if (isAimo) {
