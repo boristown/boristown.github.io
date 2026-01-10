@@ -71,7 +71,6 @@ const renderLeaderboardList = (data) => {
             if (item.rank === 2) rankColor = "text-slate-400";
             if (item.rank === 3) rankColor = "text-orange-500";
             
-            // Random avatar color generator based on name length
             const colors = ["bg-indigo-600", "bg-pink-600", "bg-teal-600", "bg-blue-600", "bg-red-600"];
             const avatarColor = colors[item.name.length % colors.length];
 
@@ -96,7 +95,6 @@ const fetchLeaderboardData = async () => {
     const leaderboardContainer = document.getElementById('aimo-leaderboard-list');
     if (!leaderboardContainer) return;
     
-    // Show loading state
     leaderboardContainer.innerHTML = `
         <div class="flex flex-col items-center justify-center py-8 text-slate-600 space-y-3">
             <div class="w-6 h-6 border-2 border-slate-700 border-t-cyan-500 rounded-full animate-spin"></div>
@@ -140,13 +138,11 @@ const renderAimoDashboard = () => {
 
 // --- DARKAGI LOGIC ---
 
-// Key Management Logic
 const STORAGE_KEY = "borristown_darkagi_key";
 const getStoredKey = () => localStorage.getItem(STORAGE_KEY);
 const setStoredKey = (key) => localStorage.setItem(STORAGE_KEY, key);
 const clearStoredKey = () => localStorage.removeItem(STORAGE_KEY);
 
-// Updated System Prompt Generator with Date/Time and "Human-in-the-loop" instructions
 const getSystemPrompt = () => {
     const now = new Date();
     const dateStr = now.toLocaleDateString('zh-CN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -157,60 +153,44 @@ const getSystemPrompt = () => {
         content: `你的名字叫做暗黑AGI，英文名DarkAGI。请使用中文与用户对话。
 当前时间：${dateStr} ${timeStr}
 
-你本身**没有互联网访问权限**，也**无法直接执行代码或操作文件**。
-但是，你可以通过**请求用户协助**来完成这些任务。
-
-当需要获取外部信息、执行计算或操作本地文件时，请输出特定的工具请求标签。系统会自动将其转换为用户可见的请求卡片。
+你拥有一个**本地沙盒执行环境**，可以自动执行计算任务。
+对于需要复杂数学计算、逻辑处理、字符串操作的任务，请直接使用 JS_AGENT 工具。
 
 工具请求格式（严格遵守）：
 
-1. 请求用户搜索网络：
+1. 本地沙盒自动执行 (Agent Toolchain):
+[[JS_AGENT: 代码内容]]
+（适用场景：计算、逻辑推理、数据转换。代码将被系统自动执行，结果会实时返回给你。请确保输出使用 console.log。）
+
+2. 请求用户搜索网络：
 [[SEARCH: 搜索关键词]]
-（适用场景：查询实时新闻、数据、事实）
 
-2. 请求用户查看网页（仅文本）：
+3. 请求用户查看网页（仅文本）：
 [[VISIT: 网址]]
-（适用场景：读取特定链接的可视内容，但不包含HTML标签）
 
-3. 请求用户运行 Python 代码：
-[[PYTHON: 代码内容]]
-或者直接输出 Python 代码块：
-\`\`\`python
-print("Hello World")
-\`\`\`
-（适用场景：复杂数学计算、数据处理、算法验证）
-
-4. 请求用户使用计算器：
-[[CALCULATOR: 数学表达式]]
-（适用场景：简单的四则运算，如 1+1，123*456。增加趣味性，让用户手动帮忙计算）
+4. 请求用户获取网页源代码（HTML）：
+[[HTML_SOURCE: 网址]]
 
 5. 文件系统操作请求：
-[[FILE_FIND: 路径或通配符]] —— 查找文件
-[[FILE_READ: 文件路径]] —— 读取文件全文
-[[FILE_WRITE: 文件路径]] —— 写入/新建文件（需后附内容）
-[[FILE_SEARCH: 文件路径, 关键字]] —— 文件内搜索
+[[FILE_FIND: 路径或通配符]]
+[[FILE_READ: 文件路径]]
+[[FILE_WRITE: 文件路径]]
+[[FILE_SEARCH: 文件路径, 关键字]]
 
-6. 请求用户获取网页源代码（HTML）：
-[[HTML_SOURCE: 网址]]
-（适用场景：需要分析网页结构、提取隐藏的URL链接（如搜索引擎结果页）、查看Meta标签。**强烈推荐用于搜索结果分析，因为普通复制会丢失链接**）
-
-7. 请求用户执行 Shell 指令 (Windows):
+6. 请求用户执行 Shell 指令 (Windows):
 [[SHELL: 指令]]
-（适用场景：系统信息查询、网络诊断、文件管理。用户主要使用 Windows 10/11，请优先提供 PowerShell 或 CMD 指令。请求用户以管理员身份运行。）
 
-8. 请求用户进行视觉识别 (人工多模态):
+7. 请求用户进行视觉识别 (人工多模态):
 [[VISION: 任务描述]]
-（适用场景：你需要“看”一张图片或一段视频。请详细描述你想看什么，例如：“请查看 desktop/image.png 并告诉我图片里有几只猫”。由用户手动查看并回复文字描述。）
 
 注意事项：
-- 发出请求后，请等待用户提供结果。
-- 不要尝试自己编造搜索结果或代码运行结果。
-- 每次回复优先输出一个主要指令。
+- [[JS_AGENT]] 是自动执行的，无需等待用户手动贴回结果，系统会自动循环。
+- 其他工具需要等待用户手动操作。
+- 每次回复只输出一个主要指令。
 `
     };
 };
 
-// Hardcoded fallback models - Excluded Google/Gemini
 const FALLBACK_MODELS = [
     { id: "meta-llama/llama-3.2-11b-vision-instruct:free", name: "Llama 3.2 11B (Free)" },
     { id: "microsoft/phi-3-mini-128k-instruct:free", name: "Phi-3 Mini (Free)" },
@@ -224,14 +204,12 @@ let darkAgiState = {
     loading: false
 };
 
-// Select a random model WITH animation (Promise-based)
 const selectRandomModelWithAnimation = async () => {
     const display = document.getElementById('darkagi-model-display');
     const models = darkAgiState.models;
     
     if (!display || !models || models.length === 0) return null;
 
-    // Animation Config
     const duration = 800; 
     const intervalTime = 50; 
     
@@ -272,7 +250,7 @@ const resetDarkAGIChat = () => {
                 <div class="bg-slate-800/80 backdrop-blur text-slate-300 rounded-2xl rounded-tl-none px-6 py-4 max-w-[85%] border border-slate-700 shadow-xl">
                     <p class="text-sm leading-relaxed font-mono">
                         <span class="text-indigo-400">系统>></span> 会话重置。<br>
-                        <span class="text-indigo-400">系统>></span> 网格模式：随机分配。<br><br>
+                        <span class="text-indigo-400">系统>></span> 网格模式：智能代理已就绪。<br><br>
                         等待指令。
                     </p>
                 </div>
@@ -296,7 +274,6 @@ const initDarkAGI = async () => {
     const status = document.getElementById('darkagi-status');
     const key = getStoredKey();
 
-    // Initialize history with current time
     if (darkAgiState.history.length === 0) {
         darkAgiState.history = [getSystemPrompt()];
     }
@@ -324,18 +301,12 @@ const initDarkAGI = async () => {
         }
 
         const authResponse = await fetch('https://openrouter.ai/api/v1/auth/key', {
-             headers: {
-                "Authorization": `Bearer ${key}`
-            }
+             headers: { "Authorization": `Bearer ${key}` }
         });
 
-        if (!authResponse.ok) {
-            throw new Error("Invalid API Key");
-        }
+        if (!authResponse.ok) throw new Error("Invalid API Key");
         
-        if (status) {
-            status.textContent = "正在获取模型...";
-        }
+        if (status) status.textContent = "正在获取模型...";
 
         const response = await fetch('https://openrouter.ai/api/v1/models');
         if (!response.ok) throw new Error("Failed to fetch models");
@@ -347,10 +318,7 @@ const initDarkAGI = async () => {
             !m.id.toLowerCase().includes('google')
         );
         
-        if (freeModels.length === 0) {
-            freeModels = FALLBACK_MODELS;
-        }
-        
+        if (freeModels.length === 0) freeModels = FALLBACK_MODELS;
         darkAgiState.models = freeModels;
         
         const display = document.getElementById('darkagi-model-display');
@@ -366,13 +334,12 @@ const initDarkAGI = async () => {
         }
         
         darkAgiState.initialized = true;
-        appendDarkAGIMessage('assistant', "连接已建立。就绪。");
+        appendDarkAGIMessage('assistant', "连接已建立。智能代理模式激活。");
 
     } catch (err) {
         console.warn("DarkAGI Init Failed.", err);
-        
         if (err.message === "Invalid API Key") {
-             if (status) {
+            if (status) {
                 status.textContent = "访问被拒绝";
                 status.className = "text-red-500 font-mono font-bold";
             }
@@ -380,12 +347,8 @@ const initDarkAGI = async () => {
             appendDarkAGIMessage('assistant', "错误：无效的 API Key。\n请重新输入有效的 OpenRouter API Key。");
             return; 
         }
-
         darkAgiState.models = FALLBACK_MODELS;
         darkAgiState.initialized = true;
-        const display = document.getElementById('darkagi-model-display');
-        if(display) display.innerText = "本地回退模式";
-
         if (status) {
             status.textContent = "离线模式";
             status.className = "text-orange-500 font-mono font-bold";
@@ -403,14 +366,16 @@ const appendDarkAGIMessage = (role, text, metrics = null) => {
     
     const bubbleClass = role === 'user' 
         ? 'bg-indigo-600/90 text-white rounded-2xl rounded-tr-none shadow-lg shadow-indigo-900/20 border border-indigo-500/30'
-        : 'bg-slate-800/80 text-slate-300 rounded-2xl rounded-tl-none border border-slate-700 shadow-xl backdrop-blur-sm';
+        : (role === 'system_auto' 
+            ? 'bg-slate-950/80 border border-cyan-500/30 text-cyan-200 rounded-lg font-mono text-xs italic opacity-80'
+            : 'bg-slate-800/80 text-slate-300 rounded-2xl rounded-tl-none border border-slate-700 shadow-xl backdrop-blur-sm');
 
     let metricsHtml = '';
     if (metrics) {
         const modelName = metrics.model.replace(':free', '');
         metricsHtml = `
             <div class="mt-2 pt-2 border-t border-slate-500/20 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-mono text-slate-400/80 select-none">
-                <span class="flex items-center text-cyan-400" title="使用的模型">
+                <span class="flex items-center text-cyan-400">
                     <span class="w-1.5 h-1.5 bg-cyan-500 rounded-full mr-1.5"></span>
                     ${modelName}
                 </span>
@@ -431,12 +396,14 @@ const appendDarkAGIMessage = (role, text, metrics = null) => {
     container.appendChild(div);
     container.scrollTop = container.scrollHeight;
     
-    if (role !== 'system') { 
+    if (role !== 'system' && role !== 'system_auto') { 
         darkAgiState.history.push({ role, content: text });
+    } else if (role === 'system_auto') {
+        darkAgiState.history.push({ role: 'user', content: text });
     }
 };
 
-const appendToolRequestMessage = (type, content, extraInfo = "") => {
+const appendToolRequestMessage = (type, content) => {
     const container = document.getElementById('darkagi-chat-container');
     const div = document.createElement('div');
     div.className = "flex justify-start w-full mb-4";
@@ -449,67 +416,45 @@ const appendToolRequestMessage = (type, content, extraInfo = "") => {
     
     if (type === "SEARCH") {
         title = "搜索工具调用请求";
-        desc = "请将以下关键字输入 google/bing/baidu 搜索引擎，然后将搜索结果复制给我。";
-        icon = '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>';
-    } else if (type === "PYTHON") {
-        title = "代码执行请求";
-        desc = "请使用 python3 执行以下代码，然后将控制台的输出结果或错误信息复制给我。";
-        colorClass = "border-blue-500/50 bg-blue-950/20 text-blue-200";
-        iconClass = "text-blue-500";
-        icon = '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>';
+        desc = "请将以下关键字输入搜索引擎，结果复制回聊天窗口。";
+        icon = '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>';
+    } else if (type === "JS_AGENT") {
+        title = "智能代理沙盒执行 (自动)";
+        desc = "系统检测到计算任务，正在本地环境中运行 JavaScript 沙盒...";
+        colorClass = "border-cyan-500/50 bg-cyan-950/20 text-cyan-200 shadow-cyan-900/40";
+        iconClass = "text-cyan-400";
+        icon = '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5" /></svg>';
     } else if (type === "VISIT") {
         title = "网页查看请求";
-        desc = "请打开以下网址，然后将主页面的内容复制给我。";
+        desc = "请打开以下网址，内容复制给我。";
         colorClass = "border-emerald-500/50 bg-emerald-950/20 text-emerald-200";
         iconClass = "text-emerald-500";
-        icon = '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>';
-    } else if (type === "CALCULATOR") {
-        title = "计算器调用请求";
-        desc = "请打开本地计算器，计算以下公式，并将结果复制给我。";
-        colorClass = "border-purple-500/50 bg-purple-950/20 text-purple-200";
-        iconClass = "text-purple-500";
-        icon = '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>';
+        icon = '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>';
     } else if (type === "HTML_SOURCE") {
         title = "HTML 源码获取请求";
-        desc = "请打开该网页，右键点击“查看网页源代码” (或 Ctrl+U)，全选并复制所有代码，然后粘贴给我。";
+        desc = "请右键查看网页源代码，全选粘贴回聊天窗口。";
         colorClass = "border-orange-500/50 bg-orange-950/20 text-orange-200";
         iconClass = "text-orange-500";
-        icon = '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5" /></svg>';
+        icon = '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5" /></svg>';
     } else if (type === "SHELL") {
-        title = "终端指令执行请求 (Windows Admin)";
-        desc = "请右键开始菜单选择“终端管理员” (PowerShell/CMD)，执行以下命令，并将输出结果复制给我。";
-        colorClass = "border-slate-600 bg-black text-slate-300 font-mono"; // Hacker/Terminal look
+        title = "终端指令执行 (Admin)";
+        desc = "请在 Windows 终端执行指令。";
+        colorClass = "border-slate-600 bg-black text-slate-300 font-mono";
         iconClass = "text-slate-400";
-        icon = '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z" /></svg>';
+        icon = '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z" /></svg>';
     } else if (type === "VISION") {
-        title = "视觉感知请求 (人工多模态)";
-        desc = "请查看指定的图片或视频，并根据我的要求描述你看到的内容。";
+        title = "人工视觉描述";
+        desc = "请查看指定图片/视频并描述内容。";
         colorClass = "border-rose-500/50 bg-rose-950/20 text-rose-200";
         iconClass = "text-rose-500";
-        icon = '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>';
+        icon = '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>';
     } else if (type.startsWith("FILE_")) {
-        // Unified File Operation Style (Fuchsia/Pink)
         colorClass = "border-fuchsia-500/50 bg-fuchsia-950/20 text-fuchsia-200";
         iconClass = "text-fuchsia-500";
         const fileAction = type.split('_')[1];
-        
-        if (fileAction === "FIND") {
-            title = "文件查找请求";
-            desc = "请在您的电脑中查找符合以下路径或通配符的文件，并将文件名列表复制给我。";
-            icon = '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>';
-        } else if (fileAction === "READ") {
-            title = "文件读取请求";
-            desc = "请打开以下文件，全选并复制其内容，然后粘贴给我。";
-            icon = '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>';
-        } else if (fileAction === "WRITE") {
-            title = "文件写入请求";
-            desc = "请在本地创建或编辑以下文件，并写入我在对话中提供的代码或文本。";
-            icon = '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" /></svg>';
-        } else if (fileAction === "SEARCH") {
-            title = "本地内容搜索请求";
-            desc = "请打开该文件，搜索以下关键字，并将包含关键字的行复制给我。";
-            icon = '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 15.75l-2.489-2.489m0 0a3.375 3.375 0 10-4.773-4.773 3.375 3.375 0 004.774 4.774zM21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>';
-        }
+        title = `本地文件${fileAction === 'FIND' ? '查找' : (fileAction === 'READ' ? '读取' : (fileAction === 'WRITE' ? '写入' : '搜索'))}`;
+        desc = `请手动完成该文件操作并将结果复制给我。`;
+        icon = '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>';
     }
 
     div.innerHTML = `
@@ -529,19 +474,30 @@ const appendToolRequestMessage = (type, content, extraInfo = "") => {
     container.appendChild(div);
     container.scrollTop = container.scrollHeight;
     
-    // Log system event
-    darkAgiState.history.push({ 
-        role: 'assistant', 
-        content: `[系统已向用户展示工具请求: ${type}] ${content}`
-    });
+    darkAgiState.history.push({ role: 'assistant', content: `[工具请求: ${type}] ${content}` });
 };
 
+// Agent Sandbox Execution
+const runLocalSandbox = async (code) => {
+    let output = "";
+    const originalLog = console.log;
+    console.log = (...args) => { output += args.map(a => String(a)).join(' ') + "\n"; };
+    
+    try {
+        const fn = new Function(code);
+        const result = fn();
+        if (result !== undefined) output += `Return: ${result}`;
+    } catch (err) {
+        output += `Execution Error: ${err.message}`;
+    } finally {
+        console.log = originalLog;
+    }
+    return output || "[Empty Output]";
+};
 
-// Extracted Core Logic for reuse (Retry & Recursive Tool Use)
 const executeAIRequest = async (recursionDepth = 0) => {
-    // Prevent infinite loops
-    if (recursionDepth > 5) {
-        appendDarkAGIMessage('assistant', "错误：对话轮次过深，已终止。");
+    if (recursionDepth > 10) {
+        appendDarkAGIMessage('assistant', "错误：检测到代理执行死循环。");
         darkAgiState.loading = false;
         toggleInputState(true);
         return;
@@ -549,206 +505,102 @@ const executeAIRequest = async (recursionDepth = 0) => {
 
     if (darkAgiState.loading && recursionDepth === 0) return;
 
-    const btn = document.getElementById('darkagi-send-btn');
     const container = document.getElementById('darkagi-chat-container');
     const key = getStoredKey();
-
-    if (!key) {
-        appendDarkAGIMessage('assistant', "认证丢失。请重新输入您的 API Key。");
-        return;
-    }
+    if (!key) return;
     
-    // Set UI Loading State
     if (recursionDepth === 0) {
         darkAgiState.loading = true;
         toggleInputState(false);
     }
 
-    // Add Loading Indicator
     const loadingId = `loading-${Date.now()}`;
     const loadingDiv = document.createElement('div');
     loadingDiv.className = "flex justify-start w-full";
     loadingDiv.id = loadingId;
     loadingDiv.innerHTML = `
-        <div class="bg-slate-800/80 border border-slate-700 rounded-2xl rounded-tl-none px-5 py-4 shadow-md">
+        <div class="bg-slate-800/80 border border-slate-700 rounded-2xl px-5 py-4 shadow-md">
             <div class="flex items-center space-x-3">
                 <div class="flex space-x-1.5">
                     <div class="w-2 h-2 bg-indigo-500 rounded-full animate-bounce"></div>
                     <div class="w-2 h-2 bg-indigo-500 rounded-full animate-bounce delay-75"></div>
                     <div class="w-2 h-2 bg-indigo-500 rounded-full animate-bounce delay-150"></div>
                 </div>
-                <span class="text-xs text-slate-400 font-mono animate-pulse" id="${loadingId}-text">正在思考...</span>
+                <span class="text-xs text-slate-400 font-mono" id="${loadingId}-text">${recursionDepth > 0 ? '代理正在迭代...' : '正在思考...'}</span>
             </div>
         </div>
     `;
     container.appendChild(loadingDiv);
     container.scrollTop = container.scrollHeight;
 
-    // --- MODEL SELECTION & RETRY LOGIC ---
     let model = null;
     let success = false;
     let data = null;
     let latency = 0;
     
-    const MAX_RETRIES = 3;
-    let attempt = 0;
-
-    // Determine initial model
-    if (darkAgiState.models && darkAgiState.models.length > 0) {
-        if (recursionDepth === 0) {
-            model = await selectRandomModelWithAnimation();
-        } else {
-             // For recursion, just pick one quickly
-             const randomM = darkAgiState.models[Math.floor(Math.random() * darkAgiState.models.length)];
-             model = randomM.id;
-        }
+    if (darkAgiState.models.length > 0) {
+        if (recursionDepth === 0) model = await selectRandomModelWithAnimation();
+        else model = darkAgiState.models[Math.floor(Math.random() * darkAgiState.models.length)].id;
     }
     if (!model) model = "meta-llama/llama-3.2-11b-vision-instruct:free";
 
-    // Retry Loop
-    while (attempt <= MAX_RETRIES && !success) {
-        const startTime = Date.now();
-        const requestBody = { "model": model, "messages": darkAgiState.history };
-        
-        try {
-             // Update loading text if retrying
-             if (attempt > 0) {
-                 const display = document.getElementById('darkagi-model-display');
-                 if (display) {
-                     display.innerText = model.split('/')[1]?.split(':')[0] || model;
-                     display.classList.add("text-yellow-400");
-                 }
-                 const loadingText = document.getElementById(`${loadingId}-text`);
-                 if (loadingText) loadingText.innerText = `请求失败，切换模型重试 (${attempt}/${MAX_RETRIES})...`;
-             }
-
-            const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-                method: "POST",
-                headers: {
-                    "Authorization": `Bearer ${key}`,
-                    "Content-Type": "application/json",
-                    "HTTP-Referer": "https://github.com/boristown/DarkAGI", 
-                    "X-Title": "BorisTown Toolkits"
-                },
-                body: JSON.stringify(requestBody)
-            });
-
-            const endTime = Date.now();
-            latency = endTime - startTime;
-
-            if (!response.ok) {
-                // If it's a 4xx or 5xx error, throw to catch block to trigger retry
-                const errorText = await response.text();
-                throw { status: response.status, responseText: errorText, requestBody };
-            }
-
-            data = await response.json();
-            success = true;
-
-        } catch (err) {
-            attempt++;
-            console.warn(`Attempt ${attempt} failed with model ${model}.`, err);
-
-            if (attempt > MAX_RETRIES) {
-                // Final failure
-                loadingDiv.remove();
-                handleError(err, container);
-                darkAgiState.loading = false;
-                toggleInputState(true);
-                return; // Exit
-            }
-            
-            // Pick a NEW random model for next attempt
-            if (darkAgiState.models && darkAgiState.models.length > 0) {
-                const randomM = darkAgiState.models[Math.floor(Math.random() * darkAgiState.models.length)];
-                model = randomM.id;
-            }
-        }
+    const startTime = Date.now();
+    try {
+        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${key}`,
+                "Content-Type": "application/json",
+                "HTTP-Referer": "https://github.com/boristown/DarkAGI", 
+                "X-Title": "BorisTown Toolkits"
+            },
+            body: JSON.stringify({ model, messages: darkAgiState.history })
+        });
+        latency = Date.now() - startTime;
+        if (!response.ok) throw { status: response.status, responseText: await response.text() };
+        data = await response.json();
+        success = true;
+    } catch (err) {
+        loadingDiv.remove();
+        handleError(err, container);
+        darkAgiState.loading = false;
+        toggleInputState(true);
+        return;
     }
 
-    // --- PROCESS SUCCESSFUL RESPONSE ---
-    
-    // Restore Model Display Color
-    const display = document.getElementById('darkagi-model-display');
-    if (display) display.classList.remove("text-yellow-400");
-
+    loadingDiv.remove();
     const aiText = data.choices[0]?.message?.content || "";
     const usage = data.usage || { prompt_tokens: '?', completion_tokens: '?' };
-    
-    loadingDiv.remove();
 
-    // --- CHECK FOR TOOL CALLS via TEXT PATTERNS ---
+    const jsMatch = aiText.match(/\[\[JS_AGENT:\s*([\s\S]+?)\]\]/);
     const searchMatch = aiText.match(/\[\[SEARCH:\s*(.+?)\]\]/);
     const visitMatch = aiText.match(/\[\[VISIT:\s*(.+?)\]\]/);
-    const calcMatch = aiText.match(/\[\[CALCULATOR:\s*(.+?)\]\]/);
     const htmlMatch = aiText.match(/\[\[HTML_SOURCE:\s*(.+?)\]\]/);
     const shellMatch = aiText.match(/\[\[SHELL:\s*(.+?)\]\]/);
     const visionMatch = aiText.match(/\[\[VISION:\s*(.+?)\]\]/);
-    // Generic File Op Regex: Capture Action (FIND, READ, WRITE, SEARCH) and Content
     const fileOpMatch = aiText.match(/\[\[FILE_(FIND|READ|WRITE|SEARCH):\s*(.+?)\]\]/);
-    
-    // Flexible Python matching: Custom tag OR Markdown block
-    let pythonMatch = aiText.match(/\[\[PYTHON:\s*([\s\S]+?)\]\]/); 
-    if (!pythonMatch) {
-        pythonMatch = aiText.match(/```python\s*([\s\S]+?)```/i);
-    }
 
-    if (searchMatch || visitMatch || pythonMatch || calcMatch || fileOpMatch || htmlMatch || shellMatch || visionMatch) {
+    if (jsMatch) {
+        const code = jsMatch[1].trim();
+        appendToolRequestMessage("JS_AGENT", code);
+        const sandboxOutput = await runLocalSandbox(code);
+        appendDarkAGIMessage('system_auto', `[SANDBOX_OUTPUT]\n${sandboxOutput}`);
+        executeAIRequest(recursionDepth + 1);
+    } else if (searchMatch || visitMatch || htmlMatch || shellMatch || visionMatch || fileOpMatch) {
+        if (!aiText.trim().startsWith('[[')) appendDarkAGIMessage('assistant', aiText, { model, input: usage.prompt_tokens, output: usage.completion_tokens, time: latency });
+        else darkAgiState.history.push({ role: 'assistant', content: aiText });
         
-        const isPureCommand = aiText.trim().startsWith('[[') || aiText.trim().startsWith('```python');
+        if (searchMatch) appendToolRequestMessage("SEARCH", searchMatch[1].trim());
+        else if (visitMatch) appendToolRequestMessage("VISIT", visitMatch[1].trim());
+        else if (htmlMatch) appendToolRequestMessage("HTML_SOURCE", htmlMatch[1].trim());
+        else if (shellMatch) appendToolRequestMessage("SHELL", shellMatch[1].trim());
+        else if (visionMatch) appendToolRequestMessage("VISION", visionMatch[1].trim());
+        else if (fileOpMatch) appendToolRequestMessage(`FILE_${fileOpMatch[1]}`, fileOpMatch[2].trim());
         
-        if (!isPureCommand) {
-             appendDarkAGIMessage('assistant', aiText, {
-                model: model,
-                input: usage.prompt_tokens,
-                output: usage.completion_tokens,
-                time: latency
-            });
-        } else {
-             // Just log it in history, don't show bubble yet (Card will be shown)
-             darkAgiState.history.push({ role: 'assistant', content: aiText });
-        }
-
-        if (searchMatch) {
-            const query = searchMatch[1].trim();
-            appendToolRequestMessage("SEARCH", query);
-        } else if (visitMatch) {
-            const url = visitMatch[1].trim();
-            appendToolRequestMessage("VISIT", url);
-        } else if (pythonMatch) {
-            const code = pythonMatch[1].trim();
-            appendToolRequestMessage("PYTHON", code);
-        } else if (calcMatch) {
-            const expr = calcMatch[1].trim();
-            appendToolRequestMessage("CALCULATOR", expr);
-        } else if (htmlMatch) {
-            const url = htmlMatch[1].trim();
-            appendToolRequestMessage("HTML_SOURCE", url);
-        } else if (shellMatch) {
-            const cmd = shellMatch[1].trim();
-            appendToolRequestMessage("SHELL", cmd);
-        } else if (visionMatch) {
-            const task = visionMatch[1].trim();
-            appendToolRequestMessage("VISION", task);
-        } else if (fileOpMatch) {
-            const action = fileOpMatch[1].trim(); // FIND, READ, etc.
-            const content = fileOpMatch[2].trim();
-            appendToolRequestMessage(`FILE_${action}`, content);
-        }
-
-        // STOP HERE. Wait for user input.
         darkAgiState.loading = false;
         toggleInputState(true);
-
     } else {
-        // Normal response, final answer
-        appendDarkAGIMessage('assistant', aiText || "无内容返回。", {
-            model: model,
-            input: usage.prompt_tokens,
-            output: usage.completion_tokens,
-            time: latency
-        });
-        
+        appendDarkAGIMessage('assistant', aiText || "无内容返回。", { model, input: usage.prompt_tokens, output: usage.completion_tokens, time: latency });
         darkAgiState.loading = false;
         toggleInputState(true);
     }
@@ -758,8 +610,8 @@ const toggleInputState = (enabled) => {
     const btn = document.getElementById('darkagi-send-btn');
     if (btn) {
         btn.disabled = !enabled;
-        if (!enabled) btn.classList.add('opacity-50', 'cursor-not-allowed');
-        else btn.classList.remove('opacity-50', 'cursor-not-allowed');
+        btn.classList.toggle('opacity-50', !enabled);
+        btn.classList.toggle('cursor-not-allowed', !enabled);
     }
     if (enabled) {
         const input = document.getElementById('darkagi-input');
@@ -768,83 +620,34 @@ const toggleInputState = (enabled) => {
 }
 
 const handleError = (err, container) => {
-    let errorMessage = "未知错误";
-    let detailedDebug = "";
-
-    if (err.responseText !== undefined) {
-            try {
-            const jsonError = JSON.parse(err.responseText);
-            errorMessage = jsonError.error?.message || jsonError.message || `API 错误 ${err.status}`;
-        } catch (e) {
-            errorMessage = `API 错误 ${err.status}: ${err.responseText.substring(0, 50)}...`;
-        }
-
-        detailedDebug = `
-            <div class="mt-2 space-y-2">
-                <details>
-                    <summary class="cursor-pointer text-indigo-400 hover:text-indigo-300 text-[10px] outline-none select-none">▶ 查看请求载荷</summary>
-                    <pre class="mt-1 p-2 bg-slate-950 rounded text-[10px] overflow-x-auto whitespace-pre-wrap text-slate-400 border border-slate-800">${JSON.stringify(err.requestBody, null, 2)}</pre>
-                </details>
-                <details open>
-                    <summary class="cursor-pointer text-red-400 hover:text-red-300 text-[10px] outline-none select-none">▶ 查看完整响应</summary>
-                    <pre class="mt-1 p-2 bg-slate-950 rounded text-[10px] overflow-x-auto whitespace-pre-wrap text-red-300 border border-red-900/30">${err.responseText}</pre>
-                </details>
-            </div>
-        `;
-    } else {
-        errorMessage = err.message || "网络/客户端错误";
-        detailedDebug = `<span class="text-slate-600 text-[10px] italic">${err.stack || ''}</span>`;
-    }
-    
-    const errorId = `error-${Date.now()}`;
-    
+    let errorMessage = err.responseText ? (JSON.parse(err.responseText).error?.message || `API 错误 ${err.status}`) : (err.message || "网络错误");
     const div = document.createElement('div');
     div.className = "flex justify-start w-full";
-    div.id = errorId;
     div.innerHTML = `
-        <div class="bg-slate-900 border border-red-900 rounded-2xl rounded-tl-none px-5 py-3.5 max-w-[95%] shadow-md break-all">
-            <div class="flex justify-between items-start mb-2">
-                <span class="text-red-400 font-bold font-mono text-xs">连接失败</span>
-                <button onclick="window.retryDarkAGI('${errorId}')" class="text-[10px] bg-red-900/50 hover:bg-red-800 text-white px-2 py-1 rounded border border-red-700 transition-colors uppercase font-mono tracking-wider">
-                    重试 ⟳
-                </button>
-            </div>
-            <div class="font-mono text-xs text-red-200 mb-2 p-2 bg-red-950/30 rounded border border-red-500/10">
-                ${errorMessage}
-            </div>
-            ${detailedDebug}
+        <div class="bg-slate-900 border border-red-900 rounded-2xl px-5 py-3.5 max-w-[95%] shadow-md">
+            <span class="text-red-400 font-bold font-mono text-xs">连接失败</span>
+            <div class="font-mono text-xs text-red-200 mt-2">${errorMessage}</div>
         </div>
     `;
     container.appendChild(div);
 }
 
-// Retry handler exposed globally
-window.retryDarkAGI = (elementId) => {
-    const el = document.getElementById(elementId);
-    if(el) el.remove();
-    executeAIRequest();
-};
-
 const handleDarkAGISend = async (e) => {
     e.preventDefault();
     if (darkAgiState.loading) return;
-
     const input = document.getElementById('darkagi-input');
     const message = input.value.trim();
     if (!message) return;
 
-    // Check Authorization Logic
     if (!getStoredKey()) {
         if (message.startsWith('sk-or-')) {
              setStoredKey(message);
              input.value = '';
-             appendDarkAGIMessage('user', '********************************');
-             appendDarkAGIMessage('assistant', '访问令牌已接受。正在初始化连接...');
+             appendDarkAGIMessage('assistant', '认证成功。正在初始化。');
              initDarkAGI();
         } else {
              input.value = '';
-             appendDarkAGIMessage('user', message);
-             appendDarkAGIMessage('assistant', '错误：令牌格式无效。\n密钥必须以 "sk-or-" 开头。');
+             appendDarkAGIMessage('assistant', '错误：密钥格式不正确。');
         }
         return;
     }
@@ -852,77 +655,30 @@ const handleDarkAGISend = async (e) => {
     input.value = '';
     input.style.height = 'auto'; 
     appendDarkAGIMessage('user', message);
-    executeAIRequest(); // Start first turn (depth 0)
+    executeAIRequest();
 };
-
-// New feature: Clear Key
-const clearKeyAndReset = () => {
-    if(confirm("确定要断开连接并清除存储的 API Key 吗？")) {
-        clearStoredKey();
-        location.reload();
-    }
-};
-// Bind to window for HTML access if needed, though we attach listener below
-window.clearKeyAndReset = clearKeyAndReset;
 
 document.getElementById('darkagi-form')?.addEventListener('submit', handleDarkAGISend);
-// Listen for New Chat button click
-document.getElementById('darkagi-new-chat-btn')?.addEventListener('click', (e) => {
-    e.preventDefault();
-    resetDarkAGIChat();
-});
-// Listen for Reset Key button (will be added to HTML)
-document.getElementById('darkagi-reset-key-btn')?.addEventListener('click', (e) => {
-    e.preventDefault();
-    clearKeyAndReset();
-});
+document.getElementById('darkagi-new-chat-btn')?.addEventListener('click', () => resetDarkAGIChat());
+document.getElementById('darkagi-reset-key-btn')?.addEventListener('click', () => { if(confirm("清除 Key?")) { clearStoredKey(); location.reload(); } });
 
 // --- ROUTING LOGIC ---
 
 const setViewVisibility = (id, isVisible) => {
     const el = document.getElementById(id);
-    if (!el) return;
-    
-    if (isVisible) {
-        el.classList.remove('hidden');
-        el.style.display = ''; 
-    } else {
-        el.classList.add('hidden');
-        el.style.display = 'none'; 
-    }
+    if (el) el.style.display = isVisible ? '' : 'none';
 };
 
 const handleRoute = () => {
-    let hash = window.location.hash.replace('#/', '#');
-    // Default to DarkAGI if no hash is present
-    if (!hash || hash === '#') {
-        hash = '#darkagi';
-    }
-    
-    const isTool = hash === '#base64';
-    const isAimo = hash === '#aimo';
-    const isDarkAgi = hash === '#darkagi';
-    const isHome = hash === '#home'; // Explicit home route
-
-    setViewVisibility('view-home', isHome);
-    setViewVisibility('view-tool', isTool);
-    setViewVisibility('view-aimo', isAimo);
-    setViewVisibility('view-darkagi', isDarkAgi);
-
-    // Toggle Global Elements
-    const globalHeader = document.getElementById('global-header');
-    const globalFooter = document.getElementById('global-footer');
-    
-    // Header is only visible in non-fullscreen apps (not DarkAGI)
-    if (globalHeader) globalHeader.style.display = isDarkAgi ? 'none' : '';
-    // Footer is only visible in non-fullscreen apps
-    if (globalFooter) globalFooter.style.display = isDarkAgi ? 'none' : '';
-
-    if (isAimo) {
-        renderAimoDashboard();
-    } else if (isDarkAgi) {
-        initDarkAGI();
-    }
+    let hash = window.location.hash.replace('#/', '#') || '#darkagi';
+    setViewVisibility('view-home', hash === '#home');
+    setViewVisibility('view-tool', hash === '#base64');
+    setViewVisibility('view-aimo', hash === '#aimo');
+    setViewVisibility('view-darkagi', hash === '#darkagi');
+    document.getElementById('global-header').style.display = hash === '#darkagi' ? 'none' : '';
+    document.getElementById('global-footer').style.display = hash === '#darkagi' ? 'none' : '';
+    if (hash === '#aimo') renderAimoDashboard();
+    else if (hash === '#darkagi') initDarkAGI();
 };
 
 window.addEventListener('hashchange', handleRoute);
@@ -931,20 +687,9 @@ window.addEventListener('load', handleRoute);
 
 // --- APP LOGIC (Base64 Tool) ---
 
-const STATES = {
-    IDLE: 'idle',
-    PROCESSING: 'processing',
-    SUCCESS: 'success',
-    ERROR: 'error'
-};
+const STATES = { IDLE: 'idle', PROCESSING: 'processing', SUCCESS: 'success', ERROR: 'error' };
+let state = { status: STATES.IDLE, generatedBlob: null, outputFileName: '' };
 
-let state = {
-    status: STATES.IDLE,
-    generatedBlob: null,
-    outputFileName: ''
-};
-
-// DOM Elements
 const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
 const stateIdle = document.getElementById('state-idle');
@@ -959,38 +704,20 @@ const resetBtn = document.getElementById('resetBtn');
 const retryBtn = document.getElementById('retryBtn');
 const errorMsg = document.getElementById('errorMsg');
 
-const readFileAsText = (file) => {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            if (event.target?.result) resolve(event.target.result);
-            else reject(new Error("无法读取文件内容"));
-        };
-        reader.onerror = () => reject(new Error("文件读取错误"));
-        reader.readAsText(file);
-    });
-};
+const readFileAsText = (file) => new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = e => res(e.target.result);
+    r.onerror = () => rej(new Error("读取失败"));
+    r.readAsText(file);
+});
 
-const convertTextToZipBlob = (textContent) => {
-    const lines = textContent.split(/\r?\n/);
-    const reversedLines = lines.reverse();
-    let base64String = reversedLines.join('');
-    base64String = base64String.replace(/\s/g, '');
-
-    if (!base64String) throw new Error("结果字符串为空。");
-
-    try {
-        const binaryString = atob(base64String);
-        const len = binaryString.length;
-        const bytes = new Uint8Array(len);
-        for (let i = 0; i < len; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
-        }
-        return new Blob([bytes], { type: "application/zip" });
-    } catch (error) {
-        console.error(error);
-        throw new Error("Base64 内容无效。请确保文件包含有效的 Base64 片段。");
-    }
+const convertTextToZipBlob = (txt) => {
+    const rev = txt.split(/\r?\n/).reverse().join('').replace(/\s/g, '');
+    if (!rev) throw new Error("空内容");
+    const bin = atob(rev);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new Blob([bytes], { type: "application/zip" });
 };
 
 const getZipFileList = async (blob) => {
@@ -998,187 +725,58 @@ const getZipFileList = async (blob) => {
         const buffer = await blob.arrayBuffer();
         const view = new DataView(buffer);
         const u8 = new Uint8Array(buffer);
-        const len = view.byteLength;
-
-        let eocdOffset = -1;
-        const maxScan = Math.min(len, 65535 + 22);
-        for (let i = len - 22; i >= len - maxScan; i--) {
-            if (view.getUint32(i, true) === 0x06054b50) {
-                eocdOffset = i;
-                break;
-            }
+        let eocd = -1;
+        for (let i = buffer.byteLength - 22; i >= 0; i--) {
+            if (view.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
         }
-
-        if (eocdOffset === -1) return [];
-
-        const entriesCount = view.getUint16(eocdOffset + 10, true);
-        const centralDirOffset = view.getUint32(eocdOffset + 16, true);
-
+        if (eocd === -1) return [];
+        const count = view.getUint16(eocd + 10, true);
+        const dirOffset = view.getUint32(eocd + 16, true);
         const files = [];
-        let offset = centralDirOffset;
-
-        for (let i = 0; i < entriesCount; i++) {
-            if (offset + 46 > len) break;
-            if (view.getUint32(offset, true) !== 0x02014b50) break;
-
-            const fileNameLen = view.getUint16(offset + 28, true);
-            const extraFieldLen = view.getUint16(offset + 30, true);
-            const fileCommentLen = view.getUint16(offset + 32, true);
-
-            const nameBytes = u8.subarray(offset + 46, offset + 46 + fileNameLen);
-            const fileName = new TextDecoder("utf-8").decode(nameBytes);
-            files.push(fileName);
-
-            offset += 46 + fileNameLen + extraFieldLen + fileCommentLen;
+        let off = dirOffset;
+        for (let i = 0; i < count; i++) {
+            if (view.getUint32(off, true) !== 0x02014b50) break;
+            const nLen = view.getUint16(off + 28, true);
+            files.push(new TextDecoder().decode(u8.subarray(off + 46, off + 46 + nLen)));
+            off += 46 + nLen + view.getUint16(off + 30, true) + view.getUint16(off + 32, true);
         }
         return files;
-    } catch (err) {
-        console.error("Failed to parse zip directory", err);
-        return [];
-    }
+    } catch { return []; }
 };
 
-const downloadBlob = (blob, filename) => {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-};
-
-// UI Handling for Tech Theme
-const setStatus = (newStatus, message = '', files = []) => {
-    state.status = newStatus;
-
-    stateIdle.classList.add('hidden');
-    stateProcessing.classList.add('hidden');
-    stateSuccess.classList.add('hidden');
-    stateError.classList.add('hidden');
-    dropZone.classList.remove('border-red-500/50', 'border-emerald-500/50', 'cursor-pointer');
-    
-    if (newStatus === STATES.IDLE) {
-        stateIdle.classList.remove('hidden');
-        dropZone.classList.add('cursor-pointer');
-    } else if (newStatus === STATES.PROCESSING) {
-        stateProcessing.classList.remove('hidden');
-        processingFileName.textContent = message;
-    } else if (newStatus === STATES.SUCCESS) {
+const setStatus = (s, msg = '', files = []) => {
+    state.status = s;
+    [stateIdle, stateProcessing, stateSuccess, stateError].forEach(el => el.classList.add('hidden'));
+    if (s === STATES.IDLE) stateIdle.classList.remove('hidden');
+    else if (s === STATES.PROCESSING) { stateProcessing.classList.remove('hidden'); processingFileName.textContent = msg; }
+    else if (s === STATES.SUCCESS) {
         stateSuccess.classList.remove('hidden');
-        dropZone.classList.add('border-emerald-500/50');
-        successFileCount.textContent = `检测到文件: ${files.length}`;
-        
-        fileListContainer.innerHTML = '';
-        if (files.length > 0) {
-            files.forEach(file => {
-                const li = document.createElement('li');
-                li.className = "px-4 py-2 flex items-center text-left hover:bg-slate-800 transition-colors";
-                li.innerHTML = `
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 text-emerald-400 mr-3 flex-shrink-0">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-                    </svg>
-                    <span class="text-xs text-slate-300 truncate font-mono">${file}</span>
-                `;
-                fileListContainer.appendChild(li);
-            });
-        } else {
-             const li = document.createElement('li');
-             li.className = "px-4 py-4 text-slate-500 text-xs italic font-mono";
-             li.textContent = "未检测到有效的 zip 结构。";
-             fileListContainer.appendChild(li);
-        }
-    } else if (newStatus === STATES.ERROR) {
-        stateError.classList.remove('hidden');
-        dropZone.classList.add('border-red-500/50');
-        errorMsg.textContent = message;
-    }
-};
-
-const reset = () => {
-    state.generatedBlob = null;
-    state.outputFileName = '';
-    fileInput.value = '';
-    setStatus(STATES.IDLE);
+        successFileCount.textContent = `文件数: ${files.length}`;
+        fileListContainer.innerHTML = files.map(f => `<li class="px-4 py-2 text-xs font-mono text-slate-300 border-b border-slate-800">${f}</li>`).join('');
+    } else if (s === STATES.ERROR) { stateError.classList.remove('hidden'); errorMsg.textContent = msg; }
 };
 
 const processFile = async (file) => {
     if (!file) return;
-
-    let displayFileName = file.name;
-    if (!displayFileName.toLowerCase().endsWith('.txt')) {
-        displayFileName += '.txt';
-    }
-
-    setStatus(STATES.PROCESSING, displayFileName);
-
+    setStatus(STATES.PROCESSING, file.name);
     try {
-        await new Promise(resolve => setTimeout(resolve, 600)); 
-        const textContent = await readFileAsText(file);
-        const zipBlob = convertTextToZipBlob(textContent);
-        const files = await getZipFileList(zipBlob);
-        
-        state.generatedBlob = zipBlob;
+        await new Promise(r => setTimeout(r, 600));
+        const txt = await readFileAsText(file);
+        const zip = convertTextToZipBlob(txt);
+        const files = await getZipFileList(zip);
+        state.generatedBlob = zip;
         state.outputFileName = `${Date.now()}.zip`;
-        
         setStatus(STATES.SUCCESS, '', files);
-    } catch (err) {
-        setStatus(STATES.ERROR, err.message || "发生了意外错误。");
-    }
+    } catch (e) { setStatus(STATES.ERROR, e.message); }
 };
 
-dropZone.addEventListener('click', (e) => {
-    if (state.status === STATES.IDLE) {
-        fileInput.click();
-    }
+dropZone.addEventListener('click', () => state.status === STATES.IDLE && fileInput.click());
+fileInput.addEventListener('change', e => e.target.files[0] && processFile(e.target.files[0]));
+downloadBtn.addEventListener('click', () => {
+    const url = URL.createObjectURL(state.generatedBlob);
+    const a = document.createElement('a');
+    a.href = url; a.download = state.outputFileName;
+    a.click(); URL.revokeObjectURL(url);
 });
-
-dropZone.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (state.status === STATES.IDLE) {
-        dropZone.classList.add('border-emerald-500', 'bg-slate-800/80', 'scale-[1.02]');
-    }
-});
-
-dropZone.addEventListener('dragleave', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    dropZone.classList.remove('border-emerald-500', 'bg-slate-800/80', 'scale-[1.02]');
-});
-
-dropZone.addEventListener('drop', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    dropZone.classList.remove('border-emerald-500', 'bg-slate-800/80', 'scale-[1.02]');
-
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-        processFile(e.dataTransfer.files[0]);
-    }
-});
-
-fileInput.addEventListener('change', (e) => {
-    if (e.target.files && e.target.files[0]) {
-        processFile(e.target.files[0]);
-    }
-});
-
-downloadBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    if (state.generatedBlob && state.outputFileName) {
-        downloadBlob(state.generatedBlob, state.outputFileName);
-    }
-});
-
-resetBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    reset();
-});
-
-retryBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    reset();
-});
-
-reset();
+resetBtn.addEventListener('click', () => setStatus(STATES.IDLE));
+retryBtn.addEventListener('click', () => setStatus(STATES.IDLE));
