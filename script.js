@@ -398,7 +398,10 @@ const runLocalSandbox = async (code) => {
 };
 
 const executeAIRequest = async (recursionDepth = 0) => {
-    if (recursionDepth > 10) {
+    const MAX_RECURSION = 10;
+    const MAX_RETRIES_PER_TURN = 5;
+
+    if (recursionDepth > MAX_RECURSION) {
         appendDarkAGIMessage('assistant', "系统保护：代理迭代过深。");
         darkAgiState.loading = false;
         toggleInputState(true);
@@ -415,73 +418,117 @@ const executeAIRequest = async (recursionDepth = 0) => {
         toggleInputState(false);
     }
 
+    // Prepare Loading Card
     const loadingId = `loading-${Date.now()}`;
     const loadingDiv = document.createElement('div');
     loadingDiv.className = "flex justify-start w-full";
     loadingDiv.id = loadingId;
     loadingDiv.innerHTML = `<div class="bg-slate-800/80 border border-slate-700 rounded-2xl px-5 py-4 shadow-md flex items-center space-x-3">
         <div class="w-2 h-2 bg-indigo-500 rounded-full animate-bounce"></div>
-        <span class="text-xs text-slate-400 font-mono">${recursionDepth > 0 ? '代理正在计算...' : '正在思考...'}</span>
+        <span class="text-xs text-slate-400 font-mono" id="${loadingId}-text">${recursionDepth > 0 ? '代理正在计算...' : '正在思考...'}</span>
     </div>`;
     container.appendChild(loadingDiv);
     container.scrollTop = container.scrollHeight;
 
     let model = null;
-    if (darkAgiState.models.length > 0) {
-        if (recursionDepth === 0) model = await selectRandomModelWithAnimation();
-        else model = darkAgiState.models[Math.floor(Math.random() * darkAgiState.models.length)].id;
+    let attempt = 0;
+    let success = false;
+    let responseData = null;
+    let turnStartTime = Date.now();
+    let turnLatency = 0;
+
+    // Retry Loop for current turn
+    while (attempt < MAX_RETRIES_PER_TURN && !success) {
+        // Select Model
+        if (darkAgiState.models.length > 0) {
+            if (recursionDepth === 0 && attempt === 0) {
+                model = await selectRandomModelWithAnimation();
+            } else {
+                // If retrying, pick a different one randomly
+                model = darkAgiState.models[Math.floor(Math.random() * darkAgiState.models.length)].id;
+                // Update UI to show new node
+                const display = document.getElementById('darkagi-model-display');
+                if (display) {
+                    display.innerText = `重试节点: ${model.split('/')[1]?.split(':')[0] || model}`;
+                    display.classList.add('text-yellow-400');
+                }
+                const loadingText = document.getElementById(`${loadingId}-text`);
+                if (loadingText) loadingText.innerText = `API 限制，正在切换节点重试 (${attempt + 1}/${MAX_RETRIES_PER_TURN})...`;
+            }
+        }
+        if (!model) model = "meta-llama/llama-3.2-11b-vision-instruct:free";
+
+        try {
+            const startTime = Date.now();
+            const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${key}`,
+                    "Content-Type": "application/json",
+                    "HTTP-Referer": "https://boristown.github.io",
+                    "X-Title": "BorisTown DarkAGI"
+                },
+                body: JSON.stringify({ model, messages: darkAgiState.history })
+            });
+            
+            turnLatency = Date.now() - startTime;
+            
+            if (!response.ok) {
+                const errText = await response.text();
+                console.warn(`Attempt ${attempt} failed:`, errText);
+                throw new Error(errText);
+            }
+            
+            responseData = await response.json();
+            success = true;
+        } catch (err) {
+            attempt++;
+            if (attempt >= MAX_RETRIES_PER_TURN) {
+                loadingDiv.remove();
+                handleError(err, container);
+                darkAgiState.loading = false;
+                toggleInputState(true);
+                return;
+            }
+            // Small pause before retry to avoid rapid hitting same limit
+            await new Promise(r => setTimeout(r, 500));
+        }
     }
-    if (!model) model = "meta-llama/llama-3.2-11b-vision-instruct:free";
 
-    const startTime = Date.now();
-    try {
-        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-            method: "POST",
-            headers: {
-                "Authorization": `Bearer ${key}`,
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ model, messages: darkAgiState.history })
-        });
-        const latency = Date.now() - startTime;
-        if (!response.ok) throw { status: response.status, responseText: await response.text() };
-        const data = await response.json();
-        const aiText = data.choices[0]?.message?.content || "";
-        const usage = data.usage || { prompt_tokens: 0, completion_tokens: 0 };
-        loadingDiv.remove();
+    loadingDiv.remove();
+    // Reset model display color
+    const display = document.getElementById('darkagi-model-display');
+    if (display) display.classList.remove('text-yellow-400');
 
-        // --- LEGACY REDIRECTOR ---
-        // If the model uses [[CALCULATOR: expr]], rewrite it to JS_AGENT automatically
-        let processedText = aiText;
-        const calcMatch = aiText.match(/\[\[CALCULATOR:\s*(.+?)\]\]/i);
-        if (calcMatch) {
-            const expr = calcMatch[1].trim();
-            processedText = aiText.replace(/\[\[CALCULATOR:.*?\]\]/gi, `[[JS_AGENT: console.log(${expr})]]`);
-        }
+    if (!responseData) return;
 
-        const jsMatch = processedText.match(/\[\[JS_AGENT:\s*([\s\S]+?)\]\]/);
-        const otherMatch = processedText.match(/\[\[(SEARCH|VISIT|HTML|SHELL|VISION|FILE_READ|FILE_WRITE):\s*(.+?)\]\]/);
+    const aiText = responseData.choices[0]?.message?.content || "";
+    
+    // --- LEGACY REDIRECTOR ---
+    let processedText = aiText;
+    const calcMatch = aiText.match(/\[\[CALCULATOR:\s*(.+?)\]\]/i);
+    if (calcMatch) {
+        const expr = calcMatch[1].trim();
+        processedText = aiText.replace(/\[\[CALCULATOR:.*?\]\]/gi, `[[JS_AGENT: console.log(${expr})]]`);
+    }
 
-        if (jsMatch) {
-            const code = jsMatch[1].trim();
-            appendToolRequestMessage("JS_AGENT", code);
-            const sandboxOutput = await runLocalSandbox(code);
-            appendDarkAGIMessage('system_auto', `[代理沙盒返回]:\n${sandboxOutput}`);
-            executeAIRequest(recursionDepth + 1);
-        } else if (otherMatch) {
-            if (!processedText.trim().startsWith('[[')) appendDarkAGIMessage('assistant', processedText, { model, time: latency });
-            else darkAgiState.history.push({ role: 'assistant', content: processedText });
-            appendToolRequestMessage(otherMatch[1], otherMatch[2]);
-            darkAgiState.loading = false;
-            toggleInputState(true);
-        } else {
-            appendDarkAGIMessage('assistant', processedText || "无回复。", { model, time: latency });
-            darkAgiState.loading = false;
-            toggleInputState(true);
-        }
-    } catch (err) {
-        loadingDiv.remove();
-        handleError(err, container);
+    const jsMatch = processedText.match(/\[\[JS_AGENT:\s*([\s\S]+?)\]\]/);
+    const otherMatch = processedText.match(/\[\[(SEARCH|VISIT|HTML|SHELL|VISION|FILE_READ|FILE_WRITE):\s*(.+?)\]\]/);
+
+    if (jsMatch) {
+        const code = jsMatch[1].trim();
+        appendToolRequestMessage("JS_AGENT", code);
+        const sandboxOutput = await runLocalSandbox(code);
+        appendDarkAGIMessage('system_auto', `[代理沙盒返回]:\n${sandboxOutput}`);
+        executeAIRequest(recursionDepth + 1);
+    } else if (otherMatch) {
+        if (!processedText.trim().startsWith('[[')) appendDarkAGIMessage('assistant', processedText, { model, time: turnLatency });
+        else darkAgiState.history.push({ role: 'assistant', content: processedText });
+        appendToolRequestMessage(otherMatch[1], otherMatch[2]);
+        darkAgiState.loading = false;
+        toggleInputState(true);
+    } else {
+        appendDarkAGIMessage('assistant', processedText || "无回复。", { model, time: turnLatency });
         darkAgiState.loading = false;
         toggleInputState(true);
     }
@@ -495,9 +542,18 @@ const toggleInputState = (enabled) => {
 }
 
 const handleError = (err, container) => {
+    let msg = "API 限制或网络连接异常";
+    try {
+        const json = JSON.parse(err.message);
+        msg = json.error?.message || msg;
+    } catch(e) {}
+
     const div = document.createElement('div');
     div.className = "flex justify-start w-full";
-    div.innerHTML = `<div class="bg-red-950/20 border border-red-500/30 text-red-200 p-4 rounded-xl text-xs font-mono">连接中断：${err.message || 'API 限制'}</div>`;
+    div.innerHTML = `<div class="bg-red-950/20 border border-red-500/30 text-red-200 p-4 rounded-xl text-xs font-mono">
+        <span class="font-bold">连接异常 >> </span> ${msg}<br>
+        <span class="opacity-50 mt-1 block">建议：检查 API Key 余额或稍后手动重试。</span>
+    </div>`;
     container.appendChild(div);
 }
 
