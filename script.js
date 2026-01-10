@@ -180,6 +180,10 @@ print("Hello World")
 \`\`\`
 （适用场景：复杂数学计算、数据处理、算法验证）
 
+4. 请求用户使用计算器：
+[[CALCULATOR: 数学表达式]]
+（适用场景：简单的四则运算，如 1+1，123*456。增加趣味性，让用户手动帮忙计算）
+
 注意事项：
 - 发出请求后，请等待用户提供结果。
 - 不要尝试自己编造搜索结果或代码运行结果。
@@ -441,6 +445,12 @@ const appendToolRequestMessage = (type, content) => {
         colorClass = "border-emerald-500/50 bg-emerald-950/20 text-emerald-200";
         iconClass = "text-emerald-500";
         icon = '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>';
+    } else if (type === "CALCULATOR") {
+        title = "计算器调用请求";
+        desc = "请打开本地计算器，计算以下公式，并将结果复制给我。";
+        colorClass = "border-purple-500/50 bg-purple-950/20 text-purple-200";
+        iconClass = "text-purple-500";
+        icon = '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>';
     }
 
     div.innerHTML = `
@@ -611,6 +621,7 @@ const executeAIRequest = async (recursionDepth = 0) => {
     // --- CHECK FOR TOOL CALLS via TEXT PATTERNS ---
     const searchMatch = aiText.match(/\[\[SEARCH:\s*(.+?)\]\]/);
     const visitMatch = aiText.match(/\[\[VISIT:\s*(.+?)\]\]/);
+    const calcMatch = aiText.match(/\[\[CALCULATOR:\s*(.+?)\]\]/);
     
     // Flexible Python matching: Custom tag OR Markdown block
     let pythonMatch = aiText.match(/\[\[PYTHON:\s*([\s\S]+?)\]\]/); 
@@ -618,7 +629,7 @@ const executeAIRequest = async (recursionDepth = 0) => {
         pythonMatch = aiText.match(/```python\s*([\s\S]+?)```/i);
     }
 
-    if (searchMatch || visitMatch || pythonMatch) {
+    if (searchMatch || visitMatch || pythonMatch || calcMatch) {
         // Push model's thought/request to history context first
         // Note: We do NOT display the raw "[[SEARCH...]]" text to user, we display the UI Card instead.
         // But we keep it in history so the model knows what it asked.
@@ -655,6 +666,9 @@ const executeAIRequest = async (recursionDepth = 0) => {
         } else if (pythonMatch) {
             const code = pythonMatch[1].trim();
             appendToolRequestMessage("PYTHON", code);
+        } else if (calcMatch) {
+            const expr = calcMatch[1].trim();
+            appendToolRequestMessage("CALCULATOR", expr);
         }
 
         // STOP HERE. Wait for user input.
