@@ -157,10 +157,10 @@ const getSystemPrompt = () => {
         content: `你的名字叫做暗黑AGI，英文名DarkAGI。请使用中文与用户对话。
 当前时间：${dateStr} ${timeStr}
 
-你本身**没有互联网访问权限**，也**无法直接执行代码**。
+你本身**没有互联网访问权限**，也**无法直接执行代码或操作文件**。
 但是，你可以通过**请求用户协助**来完成这些任务。
 
-当需要获取外部信息、执行计算或查看网页时，请输出特定的工具请求标签。系统会自动将其转换为用户可见的请求卡片。
+当需要获取外部信息、执行计算或操作本地文件时，请输出特定的工具请求标签。系统会自动将其转换为用户可见的请求卡片。
 
 工具请求格式（严格遵守）：
 
@@ -168,9 +168,9 @@ const getSystemPrompt = () => {
 [[SEARCH: 搜索关键词]]
 （适用场景：查询实时新闻、数据、事实）
 
-2. 请求用户查看网页：
+2. 请求用户查看网页（仅文本）：
 [[VISIT: 网址]]
-（适用场景：读取特定链接的内容）
+（适用场景：读取特定链接的可视内容，但不包含HTML标签）
 
 3. 请求用户运行 Python 代码：
 [[PYTHON: 代码内容]]
@@ -183,6 +183,24 @@ print("Hello World")
 4. 请求用户使用计算器：
 [[CALCULATOR: 数学表达式]]
 （适用场景：简单的四则运算，如 1+1，123*456。增加趣味性，让用户手动帮忙计算）
+
+5. 文件系统操作请求：
+[[FILE_FIND: 路径或通配符]] —— 查找文件
+[[FILE_READ: 文件路径]] —— 读取文件全文
+[[FILE_WRITE: 文件路径]] —— 写入/新建文件（需后附内容）
+[[FILE_SEARCH: 文件路径, 关键字]] —— 文件内搜索
+
+6. 请求用户获取网页源代码（HTML）：
+[[HTML_SOURCE: 网址]]
+（适用场景：需要分析网页结构、提取隐藏的URL链接（如搜索引擎结果页）、查看Meta标签。**强烈推荐用于搜索结果分析，因为普通复制会丢失链接**）
+
+7. 请求用户执行 Shell 指令 (Windows):
+[[SHELL: 指令]]
+（适用场景：系统信息查询、网络诊断、文件管理。用户主要使用 Windows 10/11，请优先提供 PowerShell 或 CMD 指令。请求用户以管理员身份运行。）
+
+8. 请求用户进行视觉识别 (人工多模态):
+[[VISION: 任务描述]]
+（适用场景：你需要“看”一张图片或一段视频。请详细描述你想看什么，例如：“请查看 desktop/image.png 并告诉我图片里有几只猫”。由用户手动查看并回复文字描述。）
 
 注意事项：
 - 发出请求后，请等待用户提供结果。
@@ -418,7 +436,7 @@ const appendDarkAGIMessage = (role, text, metrics = null) => {
     }
 };
 
-const appendToolRequestMessage = (type, content) => {
+const appendToolRequestMessage = (type, content, extraInfo = "") => {
     const container = document.getElementById('darkagi-chat-container');
     const div = document.createElement('div');
     div.className = "flex justify-start w-full mb-4";
@@ -451,6 +469,47 @@ const appendToolRequestMessage = (type, content) => {
         colorClass = "border-purple-500/50 bg-purple-950/20 text-purple-200";
         iconClass = "text-purple-500";
         icon = '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>';
+    } else if (type === "HTML_SOURCE") {
+        title = "HTML 源码获取请求";
+        desc = "请打开该网页，右键点击“查看网页源代码” (或 Ctrl+U)，全选并复制所有代码，然后粘贴给我。";
+        colorClass = "border-orange-500/50 bg-orange-950/20 text-orange-200";
+        iconClass = "text-orange-500";
+        icon = '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5" /></svg>';
+    } else if (type === "SHELL") {
+        title = "终端指令执行请求 (Windows Admin)";
+        desc = "请右键开始菜单选择“终端管理员” (PowerShell/CMD)，执行以下命令，并将输出结果复制给我。";
+        colorClass = "border-slate-600 bg-black text-slate-300 font-mono"; // Hacker/Terminal look
+        iconClass = "text-slate-400";
+        icon = '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z" /></svg>';
+    } else if (type === "VISION") {
+        title = "视觉感知请求 (人工多模态)";
+        desc = "请查看指定的图片或视频，并根据我的要求描述你看到的内容。";
+        colorClass = "border-rose-500/50 bg-rose-950/20 text-rose-200";
+        iconClass = "text-rose-500";
+        icon = '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>';
+    } else if (type.startsWith("FILE_")) {
+        // Unified File Operation Style (Fuchsia/Pink)
+        colorClass = "border-fuchsia-500/50 bg-fuchsia-950/20 text-fuchsia-200";
+        iconClass = "text-fuchsia-500";
+        const fileAction = type.split('_')[1];
+        
+        if (fileAction === "FIND") {
+            title = "文件查找请求";
+            desc = "请在您的电脑中查找符合以下路径或通配符的文件，并将文件名列表复制给我。";
+            icon = '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>';
+        } else if (fileAction === "READ") {
+            title = "文件读取请求";
+            desc = "请打开以下文件，全选并复制其内容，然后粘贴给我。";
+            icon = '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>';
+        } else if (fileAction === "WRITE") {
+            title = "文件写入请求";
+            desc = "请在本地创建或编辑以下文件，并写入我在对话中提供的代码或文本。";
+            icon = '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" /></svg>';
+        } else if (fileAction === "SEARCH") {
+            title = "本地内容搜索请求";
+            desc = "请打开该文件，搜索以下关键字，并将包含关键字的行复制给我。";
+            icon = '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 15.75l-2.489-2.489m0 0a3.375 3.375 0 10-4.773-4.773 3.375 3.375 0 004.774 4.774zM21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>';
+        }
     }
 
     div.innerHTML = `
@@ -622,6 +681,11 @@ const executeAIRequest = async (recursionDepth = 0) => {
     const searchMatch = aiText.match(/\[\[SEARCH:\s*(.+?)\]\]/);
     const visitMatch = aiText.match(/\[\[VISIT:\s*(.+?)\]\]/);
     const calcMatch = aiText.match(/\[\[CALCULATOR:\s*(.+?)\]\]/);
+    const htmlMatch = aiText.match(/\[\[HTML_SOURCE:\s*(.+?)\]\]/);
+    const shellMatch = aiText.match(/\[\[SHELL:\s*(.+?)\]\]/);
+    const visionMatch = aiText.match(/\[\[VISION:\s*(.+?)\]\]/);
+    // Generic File Op Regex: Capture Action (FIND, READ, WRITE, SEARCH) and Content
+    const fileOpMatch = aiText.match(/\[\[FILE_(FIND|READ|WRITE|SEARCH):\s*(.+?)\]\]/);
     
     // Flexible Python matching: Custom tag OR Markdown block
     let pythonMatch = aiText.match(/\[\[PYTHON:\s*([\s\S]+?)\]\]/); 
@@ -629,19 +693,7 @@ const executeAIRequest = async (recursionDepth = 0) => {
         pythonMatch = aiText.match(/```python\s*([\s\S]+?)```/i);
     }
 
-    if (searchMatch || visitMatch || pythonMatch || calcMatch) {
-        // Push model's thought/request to history context first
-        // Note: We do NOT display the raw "[[SEARCH...]]" text to user, we display the UI Card instead.
-        // But we keep it in history so the model knows what it asked.
-        
-        // However, to keep chat flow natural, we can add the raw response to history
-        // BUT we intercept the UI rendering for the tool part.
-        
-        // Actually, let's display what the model said (so user sees context) 
-        // AND then append the tool card.
-        
-        // Remove the tool command from the text displayed to user to avoid redundancy?
-        // Let's just render the tool card INSTEAD of the text if the text is ONLY the command.
+    if (searchMatch || visitMatch || pythonMatch || calcMatch || fileOpMatch || htmlMatch || shellMatch || visionMatch) {
         
         const isPureCommand = aiText.trim().startsWith('[[') || aiText.trim().startsWith('```python');
         
@@ -669,6 +721,19 @@ const executeAIRequest = async (recursionDepth = 0) => {
         } else if (calcMatch) {
             const expr = calcMatch[1].trim();
             appendToolRequestMessage("CALCULATOR", expr);
+        } else if (htmlMatch) {
+            const url = htmlMatch[1].trim();
+            appendToolRequestMessage("HTML_SOURCE", url);
+        } else if (shellMatch) {
+            const cmd = shellMatch[1].trim();
+            appendToolRequestMessage("SHELL", cmd);
+        } else if (visionMatch) {
+            const task = visionMatch[1].trim();
+            appendToolRequestMessage("VISION", task);
+        } else if (fileOpMatch) {
+            const action = fileOpMatch[1].trim(); // FIND, READ, etc.
+            const content = fileOpMatch[2].trim();
+            appendToolRequestMessage(`FILE_${action}`, content);
         }
 
         // STOP HERE. Wait for user input.
