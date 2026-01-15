@@ -197,16 +197,21 @@ let darkAgiState = {
     loading: false
 };
 
-const selectRandomModelWithAnimation = async () => {
+const selectRandomModelWithAnimation = async (excludeId = null) => {
     const display = document.getElementById('darkagi-model-display');
-    const models = darkAgiState.models;
+    let models = darkAgiState.models;
+    
+    if (excludeId) {
+        models = models.filter(m => m.id !== excludeId);
+        if (models.length === 0) models = darkAgiState.models; // Fallback if all excluded
+    }
     
     if (!display || !models || models.length === 0) return null;
 
     const duration = 800; 
     const intervalTime = 50; 
     
-    display.classList.remove("text-cyan-400", "glitch-text");
+    display.classList.remove("text-cyan-400", "glitch-text", "text-emerald-500", "text-yellow-400");
     display.classList.add("text-slate-500");
     
     return new Promise((resolve) => {
@@ -214,7 +219,7 @@ const selectRandomModelWithAnimation = async () => {
         const intervalId = setInterval(() => {
             const randomModel = models[Math.floor(Math.random() * models.length)];
             const name = (randomModel.name || randomModel.id).replace(':free', '');
-            display.innerText = `正在扫描 [${name}]...`;
+            display.innerText = `正在重路由 [${name}]...`;
             
             elapsed += intervalTime;
             
@@ -254,7 +259,7 @@ const resetDarkAGIChat = () => {
     const display = document.getElementById('darkagi-model-display');
     if(display) {
         display.innerText = "待机";
-        display.classList.remove("text-cyan-400", "glitch-text");
+        display.classList.remove("text-cyan-400", "glitch-text", "text-emerald-500");
         display.classList.add("text-slate-500");
     }
     
@@ -377,7 +382,6 @@ const runLocalSandbox = async (code) => {
     console.log = (...args) => { output += args.map(a => String(a)).join(' ') + "\n"; };
     
     try {
-        // Simple BigInt math utility pre-injection
         const factorialCode = `
             const factorial = (n) => {
                 let res = 1n;
@@ -418,7 +422,6 @@ const executeAIRequest = async (recursionDepth = 0) => {
         toggleInputState(false);
     }
 
-    // Prepare Loading Card
     const loadingId = `loading-${Date.now()}`;
     const loadingDiv = document.createElement('div');
     loadingDiv.className = "flex justify-start w-full";
@@ -434,29 +437,17 @@ const executeAIRequest = async (recursionDepth = 0) => {
     let attempt = 0;
     let success = false;
     let responseData = null;
-    let turnStartTime = Date.now();
     let turnLatency = 0;
+    let lastFailedModel = null;
 
-    // Retry Loop for current turn
     while (attempt < MAX_RETRIES_PER_TURN && !success) {
-        // Select Model
-        if (darkAgiState.models.length > 0) {
-            if (recursionDepth === 0 && attempt === 0) {
-                model = await selectRandomModelWithAnimation();
-            } else {
-                // If retrying, pick a different one randomly
-                model = darkAgiState.models[Math.floor(Math.random() * darkAgiState.models.length)].id;
-                // Update UI to show new node
-                const display = document.getElementById('darkagi-model-display');
-                if (display) {
-                    display.innerText = `重试节点: ${model.split('/')[1]?.split(':')[0] || model}`;
-                    display.classList.add('text-yellow-400');
-                }
-                const loadingText = document.getElementById(`${loadingId}-text`);
-                if (loadingText) loadingText.innerText = `API 限制，正在切换节点重试 (${attempt + 1}/${MAX_RETRIES_PER_TURN})...`;
-            }
+        // Force model switch on retry
+        model = await selectRandomModelWithAnimation(lastFailedModel);
+        
+        if (attempt > 0) {
+            const loadingText = document.getElementById(`${loadingId}-text`);
+            if (loadingText) loadingText.innerText = `API 响应异常，自动切换节点重试 (${attempt}/${MAX_RETRIES_PER_TURN})...`;
         }
-        if (!model) model = "meta-llama/llama-3.2-11b-vision-instruct:free";
 
         try {
             const startTime = Date.now();
@@ -475,7 +466,7 @@ const executeAIRequest = async (recursionDepth = 0) => {
             
             if (!response.ok) {
                 const errText = await response.text();
-                console.warn(`Attempt ${attempt} failed:`, errText);
+                lastFailedModel = model;
                 throw new Error(errText);
             }
             
@@ -483,6 +474,7 @@ const executeAIRequest = async (recursionDepth = 0) => {
             success = true;
         } catch (err) {
             attempt++;
+            console.warn(`Attempt ${attempt} failed for model ${model}:`, err.message);
             if (attempt >= MAX_RETRIES_PER_TURN) {
                 loadingDiv.remove();
                 handleError(err, container);
@@ -490,21 +482,14 @@ const executeAIRequest = async (recursionDepth = 0) => {
                 toggleInputState(true);
                 return;
             }
-            // Small pause before retry to avoid rapid hitting same limit
-            await new Promise(r => setTimeout(r, 500));
+            await new Promise(r => setTimeout(r, 600)); // Small cool down
         }
     }
 
     loadingDiv.remove();
-    // Reset model display color
-    const display = document.getElementById('darkagi-model-display');
-    if (display) display.classList.remove('text-yellow-400');
-
     if (!responseData) return;
 
     const aiText = responseData.choices[0]?.message?.content || "";
-    
-    // --- LEGACY REDIRECTOR ---
     let processedText = aiText;
     const calcMatch = aiText.match(/\[\[CALCULATOR:\s*(.+?)\]\]/i);
     if (calcMatch) {
@@ -542,7 +527,7 @@ const toggleInputState = (enabled) => {
 }
 
 const handleError = (err, container) => {
-    let msg = "API 限制或网络连接异常";
+    let msg = "API 限制或多节点尝试失败";
     try {
         const json = JSON.parse(err.message);
         msg = json.error?.message || msg;
@@ -551,8 +536,8 @@ const handleError = (err, container) => {
     const div = document.createElement('div');
     div.className = "flex justify-start w-full";
     div.innerHTML = `<div class="bg-red-950/20 border border-red-500/30 text-red-200 p-4 rounded-xl text-xs font-mono">
-        <span class="font-bold">连接异常 >> </span> ${msg}<br>
-        <span class="opacity-50 mt-1 block">建议：检查 API Key 余额或稍后手动重试。</span>
+        <span class="font-bold">深度异常 >> </span> ${msg}<br>
+        <span class="opacity-50 mt-1 block">提示：已尝试切换多个节点均无响应，请稍后手动重试或检查 API 余额。</span>
     </div>`;
     container.appendChild(div);
 }
@@ -584,11 +569,18 @@ document.getElementById('darkagi-form')?.addEventListener('submit', handleDarkAG
 document.getElementById('darkagi-new-chat-btn')?.addEventListener('click', () => resetDarkAGIChat());
 document.getElementById('darkagi-reset-key-btn')?.addEventListener('click', () => { if(confirm("清除 Key?")) { clearStoredKey(); location.reload(); } });
 
-// --- ROUTING LOGIC ---
-
 const setViewVisibility = (id, isVisible) => {
     const el = document.getElementById(id);
-    if (el) el.style.display = isVisible ? '' : 'none';
+    if (el) {
+        // Toggle 'hidden' class for Tailwind consistency
+        if (isVisible) {
+            el.classList.remove('hidden');
+            el.style.display = ''; // Clear inline display: none if present
+        } else {
+            el.classList.add('hidden');
+            el.style.display = 'none'; // Force hide
+        }
+    }
 };
 
 const handleRoute = () => {
@@ -597,17 +589,19 @@ const handleRoute = () => {
     setViewVisibility('view-tool', hash === '#base64');
     setViewVisibility('view-aimo', hash === '#aimo');
     setViewVisibility('view-darkagi', hash === '#darkagi');
-    document.getElementById('global-header').style.display = hash === '#darkagi' ? 'none' : '';
-    document.getElementById('global-footer').style.display = hash === '#darkagi' ? 'none' : '';
+    
+    // Header/Footer visibility
+    const header = document.getElementById('global-header');
+    const footer = document.getElementById('global-footer');
+    if (header) header.style.display = hash === '#darkagi' ? 'none' : '';
+    if (footer) footer.style.display = hash === '#darkagi' ? 'none' : '';
+    
     if (hash === '#aimo') renderAimoDashboard();
     else if (hash === '#darkagi') initDarkAGI();
 };
 
 window.addEventListener('hashchange', handleRoute);
 window.addEventListener('load', handleRoute);
-
-
-// --- APP LOGIC (Base64 Tool) ---
 
 const STATES = { IDLE: 'idle', PROCESSING: 'processing', SUCCESS: 'success', ERROR: 'error' };
 let state = { status: STATES.IDLE, generatedBlob: null, outputFileName: '' };
