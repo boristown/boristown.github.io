@@ -572,13 +572,12 @@ document.getElementById('darkagi-reset-key-btn')?.addEventListener('click', () =
 const setViewVisibility = (id, isVisible) => {
     const el = document.getElementById(id);
     if (el) {
-        // Toggle 'hidden' class for Tailwind consistency
         if (isVisible) {
             el.classList.remove('hidden');
-            el.style.display = ''; // Clear inline display: none if present
+            el.style.display = ''; 
         } else {
             el.classList.add('hidden');
-            el.style.display = 'none'; // Force hide
+            el.style.display = 'none'; 
         }
     }
 };
@@ -602,6 +601,9 @@ const handleRoute = () => {
 
 window.addEventListener('hashchange', handleRoute);
 window.addEventListener('load', handleRoute);
+
+// Force route check on script load to prevent race conditions
+handleRoute();
 
 const STATES = { IDLE: 'idle', PROCESSING: 'processing', SUCCESS: 'success', ERROR: 'error' };
 let state = { status: STATES.IDLE, generatedBlob: null, outputFileName: '' };
