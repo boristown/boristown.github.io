@@ -3,131 +3,142 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>凯利公式计算器 - 简约融合版</title>
+    <title>凯利计算器 - 对数精密版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body {
-            background-color: #f8fafc;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        }
-        .soft-card {
-            background: white;
-            border: 1px solid #f1f5f9;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
-        }
-        .input-field {
-            border: 1px solid #e2e8f0;
-            transition: all 0.2s;
-            appearance: none;
-            -moz-appearance: textfield;
-        }
-        .input-field::-webkit-outer-spin-button,
-        .input-field::-webkit-inner-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
-        }
-        .input-field:focus {
-            border-color: #6366f1;
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-            outline: none;
-        }
-        /* 数字更新动画 */
-        @keyframes value-pop {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.03); }
-            100% { transform: scale(1); }
-        }
+        body { background-color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; }
+        .soft-card { background: white; border: 1px solid #f1f5f9; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.05); }
+        .input-field { border: 1px solid #e2e8f0; appearance: none; -moz-appearance: textfield; }
+        .input-field::-webkit-outer-spin-button, .input-field::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .input-field:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.1); outline: none; }
+        
+        /* 自定义滑动条外观 */
+        input[type=range] { height: 6px; -webkit-appearance: none; background: #e2e8f0; border-radius: 999px; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 18px; width: 18px; border-radius: 50%; background: #6366f1; cursor: pointer; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        
+        @keyframes value-pop { 0% { transform: scale(1); } 50% { transform: scale(1.03); } 100% { transform: scale(1); } }
         .updated { animation: value-pop 0.2s ease-out; }
     </style>
 </head>
-<body class="flex items-center justify-center min-h-screen p-6">
+<body class="flex items-center justify-center min-h-screen p-4">
 
-    <div class="soft-card rounded-3xl p-8 w-full max-w-md">
-        <div class="flex items-center space-x-3 mb-8">
-            <div class="h-10 w-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-bold shadow-lg shadow-indigo-200">
-                <span class="italic text-lg">K</span>
+    <div class="soft-card rounded-[2.5rem] p-8 w-full max-w-md">
+        <div class="flex items-center justify-between mb-8">
+            <div class="flex items-center space-x-3">
+                <div class="h-10 w-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-bold shadow-lg shadow-indigo-100">K</div>
+                <div>
+                    <h2 class="text-xl font-bold text-slate-800 tracking-tight">凯利精密版</h2>
+                    <p class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Logarithmic Precision</p>
+                </div>
             </div>
-            <div>
-                <h2 class="text-xl font-bold text-slate-800">凯利计算器</h2>
-                <p class="text-xs text-slate-400 font-medium">简约交互融合版</p>
-            </div>
+            <div class="bg-indigo-50 px-2 py-1 rounded text-[10px] font-bold text-indigo-500">4位精度</div>
         </div>
         
-        <div class="space-y-5 mb-8">
+        <div class="space-y-6 mb-8">
             <div>
-                <label class="block text-sm font-semibold text-slate-600 mb-2 ml-1">总本金 (M)</label>
-                <input type="number" id="M" value="10000" class="input-field w-full px-4 py-3 rounded-xl text-slate-700 font-medium">
+                <label class="block text-xs font-bold text-slate-500 mb-2 ml-1 uppercase tracking-wider">总本金 (M)</label>
+                <input type="number" id="M" value="10000" class="input-field w-full px-4 py-3 rounded-2xl text-slate-700 font-bold text-lg">
             </div>
             
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-sm font-semibold text-slate-600 mb-2 ml-1">市场价格 (p1)</label>
-                    <input type="number" id="p1" value="0.5" step="0.01" class="input-field w-full px-4 py-3 rounded-xl text-slate-700 font-medium">
+            <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                <div class="flex justify-between items-center mb-3">
+                    <label class="text-xs font-bold text-slate-500 uppercase">市场价格 (p1)</label>
+                    <input type="number" id="p1_num" step="0.0001" class="w-20 bg-transparent text-right font-mono font-bold text-indigo-600 outline-none">
                 </div>
-                <div>
-                    <label class="block text-sm font-semibold text-slate-600 mb-2 ml-1">评估概率 (p2)</label>
-                    <input type="number" id="p2" value="0.6" step="0.01" class="input-field w-full px-4 py-3 rounded-xl text-slate-700 font-bold text-indigo-600">
-                </div>
+                <input type="range" id="p1_range" min="0" max="10000" value="5000" class="w-full">
             </div>
 
-            <div>
-                <label class="block text-sm font-semibold text-slate-600 mb-3 ml-1 flex justify-between">
-                    <span>执行率 (k)</span>
-                    <span id="k-val" class="text-indigo-600 font-bold">1.0</span>
-                </label>
-                <input type="range" id="k" min="0" max="1" step="0.1" value="1.0" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600">
-                <div class="flex justify-between text-[10px] text-slate-400 mt-2 px-1">
-                    <span>保守</span>
-                    <span>激进 (满注)</span>
+            <div class="bg-indigo-50/30 p-4 rounded-2xl border border-indigo-100">
+                <div class="flex justify-between items-center mb-3">
+                    <label class="text-xs font-bold text-indigo-500 uppercase">评估概率 (p2)</label>
+                    <input type="number" id="p2_num" step="0.0001" class="w-20 bg-transparent text-right font-mono font-bold text-indigo-600 outline-none">
                 </div>
+                <input type="range" id="p2_range" min="0" max="10000" value="6000" class="w-full">
+            </div>
+
+            <div class="px-1">
+                <label class="block text-xs font-bold text-slate-500 mb-3 uppercase flex justify-between">
+                    <span>执行率 (k)</span>
+                    <span id="k-val" class="text-indigo-600 font-mono">1.0</span>
+                </label>
+                <input type="range" id="k" min="0" max="1" step="0.1" value="1.0" class="w-full">
             </div>
         </div>
 
-        <div class="bg-slate-900 rounded-2xl p-6 text-white shadow-xl space-y-4">
-            <div class="flex justify-between items-center">
-                <span class="text-slate-400 text-sm">目标持仓比例</span>
-                <span id="res-percent" class="text-xl font-bold text-indigo-300 tabular-nums">--</span>
-            </div>
-            <div class="flex justify-between items-center">
-                <span class="text-slate-400 text-sm">应持有头寸数</span>
-                <span id="res-shares" class="text-xl font-bold tabular-nums">--</span>
-            </div>
-            <div class="h-px bg-slate-800 my-1"></div>
-            <div class="flex justify-between items-center">
-                <span class="text-slate-400 text-sm font-medium">当前投入成本</span>
-                <span id="res-cost" class="text-2xl font-bold text-emerald-400 tabular-nums">--</span>
+        <div class="bg-slate-900 rounded-[2rem] p-7 text-white shadow-2xl relative overflow-hidden">
+            <div class="relative z-10 space-y-4">
+                <div class="flex justify-between items-center">
+                    <span class="text-slate-400 text-xs font-bold uppercase tracking-wider">目标持仓</span>
+                    <span id="res-percent" class="text-2xl font-black text-indigo-300 tabular-nums">--</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-slate-400 text-xs font-bold uppercase tracking-wider">建议头寸</span>
+                    <span id="res-shares" class="text-2xl font-black tabular-nums">--</span>
+                </div>
+                <div class="h-px bg-slate-800 my-1"></div>
+                <div class="flex justify-between items-center">
+                    <span class="text-emerald-500/50 text-xs font-bold uppercase tracking-wider">投入成本</span>
+                    <span id="res-cost" class="text-3xl font-black text-emerald-400 tabular-nums shadow-emerald-400/20">--</span>
+                </div>
             </div>
         </div>
         
-        <p id="msg" class="mt-4 text-center text-xs font-bold text-amber-600 py-2 bg-amber-50 rounded-lg hidden"></p>
+        <p id="msg" class="mt-4 text-center text-[10px] font-black text-amber-600 py-2 bg-amber-50 rounded-xl hidden"></p>
     </div>
 
     <script>
-        const inputs = ['M', 'p1', 'p2', 'k'];
+        // 对数映射函数：将 0-10000 的线性范围映射到 0-0.9999 的概率空间
+        // 逻辑：在低位(0-0.8)接近线性，在高位(0.9以上)极其精密
+        function rangeToProb(val) {
+            const v = val / 10000;
+            // 使用指数变换，使得越靠近 1，步进越小
+            // 公式：1 - 10^(-v*4) 可以在 4 位小数内分布
+            const prob = 1 - Math.pow(10, -(v * 4)); 
+            // 修正：我们还是使用一个更直观的非线性映射，既能调 0.5 也能调 0.9999
+            // 简单的二次映射即可满足“越往右越慢”
+            const scale = 1 - Math.pow(1 - v, 2.5);
+            return Math.min(0.9999, Math.max(0, scale)).toFixed(4);
+        }
+
+        function probToRange(prob) {
+            const v = 1 - Math.pow(1 - prob, 1/2.5);
+            return v * 10000;
+        }
+
+        const ids = ['M', 'p1_num', 'p1_range', 'p2_num', 'p2_range', 'k'];
         const el = {};
-        inputs.forEach(id => el[id] = document.getElementById(id));
-        const kValLabel = document.getElementById('k-val');
+        ids.forEach(id => el[id] = document.getElementById(id));
         
+        // 初始设置
+        el.p1_num.value = 0.5000;
+        el.p1_range.value = probToRange(0.5);
+        el.p2_num.value = 0.6000;
+        el.p2_range.value = probToRange(0.6);
+
+        function updateFromRange(type) {
+            el[type + '_num'].value = rangeToProb(el[type + '_range'].value);
+            calculate();
+        }
+
+        function updateFromNum(type) {
+            let val = parseFloat(el[type + '_num'].value);
+            if(val > 0.9999) val = 0.9999;
+            el[type + '_range'].value = probToRange(val);
+            calculate();
+        }
+
         function calculate() {
-            const M = parseFloat(el.M.value), p1 = parseFloat(el.p1.value), p2 = parseFloat(el.p2.value), k = parseFloat(el.k.value);
+            const M = parseFloat(el.M.value), p1 = parseFloat(el.p1_num.value), p2 = parseFloat(el.p2_num.value), k = parseFloat(el.k.value);
+            document.getElementById('k-val').innerText = k.toFixed(1);
             const msg = document.getElementById('msg');
-            kValLabel.innerText = k.toFixed(1);
-            
             msg.classList.add('hidden');
-            const results = [document.getElementById('res-percent'), document.getElementById('res-shares'), document.getElementById('res-cost')];
-            
-            // 增加微动效反馈
-            results.forEach(r => { 
-                r.classList.remove('updated'); 
-                void r.offsetWidth; 
-                r.classList.add('updated'); 
-            });
+
+            const resFields = ['res-percent', 'res-shares', 'res-cost'].map(id => document.getElementById(id));
+            resFields.forEach(r => { r.classList.remove('updated'); void r.offsetWidth; r.classList.add('updated'); });
 
             if (p2 <= p1) {
-                results[0].innerText = "0.00%";
-                results[1].innerText = "0";
-                results[2].innerText = "$0.00";
-                msg.innerText = "⚠️ 提示：评估概率不占优，建议不开仓";
+                resFields[0].innerText = "0.00%"; resFields[1].innerText = "0"; resFields[2].innerText = "$0.00";
+                msg.innerText = "● 评估概率 p2 必须大于市场价格 p1";
                 msg.classList.remove('hidden');
                 return;
             }
@@ -136,15 +147,18 @@
             const target_f = f_star * k;
             const N = (M * target_f) / p1;
 
-            results[0].innerText = (target_f * 100).toFixed(2) + "%";
-            results[1].innerText = Math.floor(N).toLocaleString();
-            results[2].innerText = "$" + (Math.floor(N) * p1).toLocaleString(undefined, {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            });
+            resFields[0].innerText = (target_f * 100).toFixed(2) + "%";
+            resFields[1].innerText = Math.floor(N).toLocaleString();
+            resFields[2].innerText = "$" + (Math.floor(N) * p1).toLocaleString(undefined, {minimumFractionDigits: 2});
         }
 
-        inputs.forEach(id => el[id].addEventListener('input', calculate));
+        el.p1_range.oninput = () => updateFromRange('p1');
+        el.p2_range.oninput = () => updateFromRange('p2');
+        el.p1_num.onchange = () => updateFromNum('p1');
+        el.p2_num.onchange = () => updateFromNum('p2');
+        el.M.oninput = calculate;
+        el.k.oninput = calculate;
+
         calculate();
     </script>
 </body>
