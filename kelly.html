@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>凯利计算器 - 极致紧凑版</title>
+    <title>凯利计算器 - Polymarket 对齐版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background-color: #f1f5f9; font-family: system-ui, -apple-system, sans-serif; letter-spacing: -0.01em; }
         .soft-card { background: white; box-shadow: 0 30px 60px -12px rgba(0,0,0,0.12); }
         
-        /* 滑动条美化 */
         input[type=range] { height: 4px; -webkit-appearance: none; background: #e2e8f0; border-radius: 10px; cursor: pointer; }
         input[type=range]::-webkit-slider-thumb { 
             -webkit-appearance: none; height: 18px; width: 18px; border-radius: 50%; 
@@ -40,7 +39,7 @@
             <div class="mb-5">
                 <div class="flex justify-between items-end">
                     <span class="text-[10px] font-bold text-slate-400 uppercase">Market Price (P1)</span>
-                    <input type="number" id="p1_num" step="0.0001" class="w-32 text-right font-mono font-black text-2xl text-slate-800 outline-none bg-transparent">
+                    <input type="number" id="p1_num" step="0.001" class="w-32 text-right font-mono font-black text-2xl text-slate-800 outline-none bg-transparent">
                 </div>
                 <div class="relative px-1 pb-4 mt-1">
                     <input type="range" id="p1_range" min="0" max="1000" value="500" class="w-full">
@@ -53,7 +52,7 @@
             <div class="mb-5">
                 <div class="flex justify-between items-end">
                     <span class="text-[10px] font-bold text-indigo-400 uppercase">Edge Probability (P2)</span>
-                    <input type="number" id="p2_num" step="0.0001" class="w-32 text-right font-mono font-black text-2xl text-indigo-600 outline-none bg-transparent">
+                    <input type="number" id="p2_num" step="0.001" class="w-32 text-right font-mono font-black text-2xl text-indigo-600 outline-none bg-transparent">
                 </div>
                 <div class="relative px-1 pb-4 mt-1">
                     <input type="range" id="p2_range" min="0" max="1000" value="600" class="w-full">
@@ -97,20 +96,21 @@
     </div>
 
     <script>
+        // 核心修改：将动态判断精度统一修改为 3 位小数
         function formatProb(prob) {
-            const p = parseFloat(prob);
-            return (p < 0.01 || p > 0.99) ? p.toFixed(4) : p.toFixed(2);
+            return parseFloat(prob).toFixed(3);
         }
 
         function rangeToProb(val) {
             let v = val / 1000;
-            if (val > 492 && val < 508) return "0.50";
+            // 磁力吸附 0.50
+            if (val > 492 && val < 508) return "0.500";
             let prob = v <= 0.5 ? 0.5 * Math.pow(v/0.5, 3.5) : 0.5 + 0.5 * (1 - Math.pow(1 - (v-0.5)/0.5, 3.5));
-            return formatProb(Math.max(0.0001, Math.min(0.9999, prob)));
+            return formatProb(Math.max(0.001, Math.min(0.999, prob)));
         }
 
         function probToRange(prob) {
-            if (Math.abs(prob - 0.5) < 0.0001) return 500;
+            if (Math.abs(prob - 0.5) < 0.001) return 500;
             return prob < 0.5 ? Math.pow(prob / 0.5, 1/3.5) * 500 : (1 - Math.pow(1 - (prob - 0.5)/0.5, 1/3.5)) * 500 + 500;
         }
 
@@ -138,10 +138,12 @@
 
         el.p1_range.oninput = () => { el.p1_num.value = rangeToProb(el.p1_range.value); calculate(); };
         el.p2_range.oninput = () => { el.p2_num.value = rangeToProb(el.p2_range.value); calculate(); };
-        el.p1_num.onchange = () => { let v = Math.max(0.0001, Math.min(0.9999, parseFloat(el.p1_num.value))); el.p1_num.value = formatProb(v); el.p1_range.value = probToRange(v); calculate(); };
-        el.p2_num.onchange = () => { let v = Math.max(0.0001, Math.min(0.9999, parseFloat(el.p2_num.value))); el.p2_num.value = formatProb(v); el.p2_range.value = probToRange(v); calculate(); };
+        el.p1_num.onchange = () => { let v = Math.max(0.001, Math.min(0.999, parseFloat(el.p1_num.value))); el.p1_num.value = formatProb(v); el.p1_range.value = probToRange(v); calculate(); };
+        el.p2_num.onchange = () => { let v = Math.max(0.001, Math.min(0.999, parseFloat(el.p2_num.value))); el.p2_num.value = formatProb(v); el.p2_range.value = probToRange(v); calculate(); };
         el.M.oninput = calculate; el.k.oninput = calculate;
-        el.p1_num.value = "0.50"; el.p2_num.value = "0.60"; calculate();
+        
+        // 设置符合 Polymarket 习惯的初始值
+        el.p1_num.value = "0.500"; el.p2_num.value = "0.600"; calculate();
     </script>
 </body>
 </html>
