@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kelly Calculator - 独立工具版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-white rounded-2xl shadow-xl border border-slate-200 p-6 sm:p-8 w-full max-w-lg">
+        <div class="flex items-center space-x-3 mb-8">
+            <div class="h-10 w-10 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold shadow-lg">K</div>
+            <div>
+                <h2 class="text-xl font-bold text-slate-900 leading-tight">Kelly Calculator</h2>
+                <p class="text-xs text-slate-500 font-medium">Position Sizing Utility</p>
+            </div>
+        </div>
+        
+        <div class="space-y-4 mb-8">
+            <div class="flex justify-between items-center">
+                <label class="text-sm font-semibold text-slate-700">总本金 (M)</label>
+                <input type="number" id="M" value="10000" class="w-32 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-right">
+            </div>
+            <div class="flex justify-between items-center">
+                <label class="text-sm font-semibold text-slate-700">市场实时价格 (p1)</label>
+                <input type="number" id="p1" value="0.98" step="0.01" class="w-32 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-right">
+            </div>
+            <div class="flex justify-between items-center">
+                <label class="text-sm font-semibold text-slate-700">你的评估概率 (p2)</label>
+                <input type="number" id="p2" value="0.9999" step="0.0001" class="w-32 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-right">
+            </div>
+            <div class="flex justify-between items-center">
+                <label class="text-sm font-semibold text-slate-700">执行率 (k)</label>
+                <input type="number" id="k" value="0.5" step="0.1" class="w-32 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-right">
+            </div>
+        </div>
+
+        <div class="bg-slate-900 rounded-xl p-6 text-white shadow-2xl">
+            <div class="space-y-4">
+                <div class="flex justify-between items-center">
+                    <span class="text-slate-400 text-sm font-medium">目标持仓比例</span>
+                    <span id="res-percent" class="text-xl font-mono font-bold text-indigo-400">--</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-slate-400 text-sm font-medium">应持有头寸数</span>
+                    <span id="res-shares" class="text-xl font-mono font-bold">--</span>
+                </div>
+                <div class="pt-4 border-t border-slate-700 flex justify-between items-center">
+                    <span class="text-slate-400 text-sm font-medium">当前投入成本</span>
+                    <span id="res-cost" class="text-2xl font-mono font-bold text-emerald-400">--</span>
+                </div>
+            </div>
+        </div>
+        
+        <p id="msg" class="mt-4 text-center text-sm font-medium text-amber-500 bg-amber-50 py-2 rounded-lg hidden"></p>
+    </div>
+
+    <script>
+        const inputs = ['M', 'p1', 'p2', 'k'];
+        const el = {};
+        inputs.forEach(id => el[id] = document.getElementById(id));
+        
+        function calculate() {
+            const M = parseFloat(el.M.value);
+            const p1 = parseFloat(el.p1.value);
+            const p2 = parseFloat(el.p2.value);
+            const k = parseFloat(el.k.value);
+            const msg = document.getElementById('msg');
+            
+            msg.classList.add('hidden');
+
+            if (p2 <= p1) {
+                document.getElementById('res-percent').innerText = "0.00%";
+                document.getElementById('res-shares').innerText = "0";
+                document.getElementById('res-cost').innerText = "$0.00";
+                msg.innerText = "⚠️ 当前无优势，不建议开仓";
+                msg.classList.remove('hidden');
+                return;
+            }
+
+            // 凯利公式
+            const f_star = (p2 - p1) / (1 - p1);
+            const target_f = f_star * k;
+            const N = (M * target_f) / p1;
+
+            // 更新显示
+            document.getElementById('res-percent').innerText = (target_f * 100).toFixed(2) + "%";
+            document.getElementById('res-shares').innerText = Math.floor(N).toLocaleString();
+            document.getElementById('res-cost').innerText = "$" + (Math.floor(N) * p1).toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        // 监听所有输入框的变化
+        inputs.forEach(id => el[id].addEventListener('input', calculate));
+        
+        // 初始执行一次
+        calculate();
+    </script>
+</body>
+</html>
