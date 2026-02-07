@@ -3,21 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>凯利计算器 - 对数精密版</title>
+    <title>凯利计算器 - 智能精度版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background-color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; }
-        .soft-card { background: white; border: 1px solid #f1f5f9; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.05); }
-        .input-field { border: 1px solid #e2e8f0; appearance: none; -moz-appearance: textfield; }
+        .soft-card { background: white; border: 1px solid #f1f5f9; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.08); }
+        .input-field { border: 1px solid #e2e8f0; appearance: none; -moz-appearance: textfield; transition: all 0.2s; }
         .input-field::-webkit-outer-spin-button, .input-field::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-        .input-field:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.1); outline: none; }
+        .input-field:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); outline: none; }
         
-        /* 自定义滑动条外观 */
-        input[type=range] { height: 6px; -webkit-appearance: none; background: #e2e8f0; border-radius: 999px; }
-        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 18px; width: 18px; border-radius: 50%; background: #6366f1; cursor: pointer; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        input[type=range] { height: 6px; -webkit-appearance: none; background: #e2e8f0; border-radius: 999px; position: relative; z-index: 10; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 20px; width: 20px; border-radius: 50%; background: #6366f1; cursor: pointer; border: 3px solid white; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         
-        @keyframes value-pop { 0% { transform: scale(1); } 50% { transform: scale(1.03); } 100% { transform: scale(1); } }
+        .axis-label { font-size: 9px; color: #94a3b8; font-weight: 700; position: absolute; transform: translateX(-50%); top: 18px; }
+        
+        @keyframes value-pop { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
         .updated { animation: value-pop 0.2s ease-out; }
+        .precision-pill { font-size: 9px; padding: 2px 6px; border-radius: 4px; font-weight: 800; transition: all 0.3s; }
+        .mode-low { background: #f1f5f9; color: #94a3b8; }
+        .mode-high { background: #e0e7ff; color: #6366f1; }
     </style>
 </head>
 <body class="flex items-center justify-center min-h-screen p-4">
@@ -27,93 +31,132 @@
             <div class="flex items-center space-x-3">
                 <div class="h-10 w-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-bold shadow-lg shadow-indigo-100">K</div>
                 <div>
-                    <h2 class="text-xl font-bold text-slate-800 tracking-tight">凯利精密版</h2>
-                    <p class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Logarithmic Precision</p>
+                    <h2 class="text-xl font-bold text-slate-800 tracking-tight text-indigo-900">凯利智能精度</h2>
+                    <p class="text-[10px] text-slate-400 uppercase font-bold tracking-widest italic">Adaptive Precision</p>
                 </div>
             </div>
-            <div class="bg-indigo-50 px-2 py-1 rounded text-[10px] font-bold text-indigo-500">4位精度</div>
+            <div id="precision-tag" class="precision-pill mode-low">AUTO</div>
         </div>
         
-        <div class="space-y-6 mb-8">
+        <div class="space-y-8 mb-8">
             <div>
-                <label class="block text-xs font-bold text-slate-500 mb-2 ml-1 uppercase tracking-wider">总本金 (M)</label>
-                <input type="number" id="M" value="10000" class="input-field w-full px-4 py-3 rounded-2xl text-slate-700 font-bold text-lg">
+                <label class="block text-[11px] font-bold text-slate-400 mb-2 ml-1 uppercase tracking-wider">总本金 (M)</label>
+                <input type="number" id="M" value="10000" class="input-field w-full px-5 py-4 rounded-2xl text-slate-700 font-bold text-xl bg-slate-50/50">
             </div>
             
-            <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                <div class="flex justify-between items-center mb-3">
-                    <label class="text-xs font-bold text-slate-500 uppercase">市场价格 (p1)</label>
-                    <input type="number" id="p1_num" step="0.0001" class="w-20 bg-transparent text-right font-mono font-bold text-indigo-600 outline-none">
+            <div class="space-y-4">
+                <div class="flex justify-between items-center">
+                    <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">市场价格 (p1)</label>
+                    <input type="number" id="p1_num" step="0.0001" class="w-28 bg-transparent text-right font-mono font-bold text-indigo-600 outline-none text-xl">
                 </div>
-                <input type="range" id="p1_range" min="0" max="10000" value="5000" class="w-full">
+                <div class="relative px-1 pb-6">
+                    <input type="range" id="p1_range" min="0" max="1000" value="500" class="w-full">
+                    <span class="axis-label" style="left: 0%">0.0001</span>
+                    <span class="axis-label" style="left: 50%">0.5</span>
+                    <span class="axis-label" style="left: 100%">0.9999</span>
+                </div>
             </div>
 
-            <div class="bg-indigo-50/30 p-4 rounded-2xl border border-indigo-100">
-                <div class="flex justify-between items-center mb-3">
-                    <label class="text-xs font-bold text-indigo-500 uppercase">评估概率 (p2)</label>
-                    <input type="number" id="p2_num" step="0.0001" class="w-20 bg-transparent text-right font-mono font-bold text-indigo-600 outline-none">
+            <div class="space-y-4">
+                <div class="flex justify-between items-center">
+                    <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider text-indigo-400">评估概率 (p2)</label>
+                    <input type="number" id="p2_num" step="0.0001" class="w-28 bg-transparent text-right font-mono font-bold text-indigo-600 outline-none text-xl">
                 </div>
-                <input type="range" id="p2_range" min="0" max="10000" value="6000" class="w-full">
+                <div class="relative px-1 pb-6">
+                    <input type="range" id="p2_range" min="0" max="1000" value="600" class="w-full">
+                    <span class="axis-label" style="left: 0%">0.0001</span>
+                    <span class="axis-label" style="left: 50%">0.5</span>
+                    <span class="axis-label" style="left: 100%">0.9999</span>
+                </div>
             </div>
 
-            <div class="px-1">
-                <label class="block text-xs font-bold text-slate-500 mb-3 uppercase flex justify-between">
+            <div>
+                <label class="block text-[11px] font-bold text-slate-400 mb-3 uppercase flex justify-between tracking-wider">
                     <span>执行率 (k)</span>
-                    <span id="k-val" class="text-indigo-600 font-mono">1.0</span>
+                    <span id="k-val" class="text-indigo-600 font-mono font-black">1.0</span>
                 </label>
                 <input type="range" id="k" min="0" max="1" step="0.1" value="1.0" class="w-full">
             </div>
         </div>
 
-        <div class="bg-slate-900 rounded-[2rem] p-7 text-white shadow-2xl relative overflow-hidden">
-            <div class="relative z-10 space-y-4">
-                <div class="flex justify-between items-center">
-                    <span class="text-slate-400 text-xs font-bold uppercase tracking-wider">目标持仓</span>
-                    <span id="res-percent" class="text-2xl font-black text-indigo-300 tabular-nums">--</span>
-                </div>
-                <div class="flex justify-between items-center">
-                    <span class="text-slate-400 text-xs font-bold uppercase tracking-wider">建议头寸</span>
-                    <span id="res-shares" class="text-2xl font-black tabular-nums">--</span>
-                </div>
-                <div class="h-px bg-slate-800 my-1"></div>
-                <div class="flex justify-between items-center">
-                    <span class="text-emerald-500/50 text-xs font-bold uppercase tracking-wider">投入成本</span>
-                    <span id="res-cost" class="text-3xl font-black text-emerald-400 tabular-nums shadow-emerald-400/20">--</span>
-                </div>
+        <div class="bg-slate-900 rounded-[2.2rem] p-7 text-white shadow-2xl space-y-4 border-b-4 border-indigo-500">
+            <div class="flex justify-between items-center">
+                <span class="text-slate-500 text-[10px] font-bold uppercase tracking-[0.2em]">目标持仓比例</span>
+                <span id="res-percent" class="text-2xl font-black text-indigo-300 tabular-nums">--</span>
+            </div>
+            <div class="flex justify-between items-center">
+                <span class="text-slate-500 text-[10px] font-bold uppercase tracking-[0.2em]">建议头寸</span>
+                <span id="res-shares" class="text-2xl font-black tabular-nums">--</span>
+            </div>
+            <div class="h-px bg-slate-800"></div>
+            <div class="flex justify-between items-center">
+                <span class="text-emerald-500/50 text-[10px] font-bold uppercase tracking-[0.2em]">预计投入成本</span>
+                <span id="res-cost" class="text-3xl font-black text-emerald-400 tabular-nums shadow-emerald-400/20">--</span>
             </div>
         </div>
         
-        <p id="msg" class="mt-4 text-center text-[10px] font-black text-amber-600 py-2 bg-amber-50 rounded-xl hidden"></p>
+        <p id="msg" class="mt-4 text-center text-[10px] font-black text-amber-500 py-2 bg-amber-50 rounded-xl hidden italic uppercase"></p>
     </div>
 
     <script>
-        // 对数映射函数：将 0-10000 的线性范围映射到 0-0.9999 的概率空间
-        // 逻辑：在低位(0-0.8)接近线性，在高位(0.9以上)极其精密
+        // 核心精度控制逻辑
+        function formatProb(prob) {
+            const p = parseFloat(prob);
+            // 规则：小于0.01 或 大于0.99 使用 4 位，其余 2 位
+            if (p < 0.01 || p > 0.99) {
+                updatePrecisionTag(true);
+                return p.toFixed(4);
+            } else {
+                updatePrecisionTag(false);
+                return p.toFixed(2);
+            }
+        }
+
+        function updatePrecisionTag(isHigh) {
+            const tag = document.getElementById('precision-tag');
+            if(isHigh) {
+                tag.innerText = "精密模式 (4D)";
+                tag.className = "precision-pill mode-high";
+            } else {
+                tag.innerText = "常规模式 (2D)";
+                tag.className = "precision-pill mode-low";
+            }
+        }
+
         function rangeToProb(val) {
-            const v = val / 10000;
-            // 使用指数变换，使得越靠近 1，步进越小
-            // 公式：1 - 10^(-v*4) 可以在 4 位小数内分布
-            const prob = 1 - Math.pow(10, -(v * 4)); 
-            // 修正：我们还是使用一个更直观的非线性映射，既能调 0.5 也能调 0.9999
-            // 简单的二次映射即可满足“越往右越慢”
-            const scale = 1 - Math.pow(1 - v, 2.5);
-            return Math.min(0.9999, Math.max(0, scale)).toFixed(4);
+            let v = val / 1000;
+            let prob;
+            
+            // 0.5 磁力吸附
+            if (val > 488 && val < 512) return "0.50";
+
+            if (v <= 0.5) {
+                let t = v / 0.5; 
+                prob = 0.5 * Math.pow(t, 3.5); // 增加指数使两端更精密
+                if (prob < 0.0001) prob = 0.0001;
+            } else {
+                let t = (v - 0.5) / 0.5;
+                prob = 0.5 + 0.5 * (1 - Math.pow(1 - t, 3.5));
+                if (prob > 0.9999) prob = 0.9999;
+            }
+            return formatProb(prob);
         }
 
         function probToRange(prob) {
-            const v = 1 - Math.pow(1 - prob, 1/2.5);
-            return v * 10000;
+            if (Math.abs(prob - 0.5) < 0.0001) return 500;
+            if (prob < 0.5) {
+                return Math.pow(prob / 0.5, 1/3.5) * 500;
+            } else {
+                return (1 - Math.pow(1 - (prob - 0.5)/0.5, 1/3.5)) * 500 + 500;
+            }
         }
 
         const ids = ['M', 'p1_num', 'p1_range', 'p2_num', 'p2_range', 'k'];
         const el = {};
         ids.forEach(id => el[id] = document.getElementById(id));
         
-        // 初始设置
-        el.p1_num.value = 0.5000;
-        el.p1_range.value = probToRange(0.5);
-        el.p2_num.value = 0.6000;
-        el.p2_range.value = probToRange(0.6);
+        el.p1_num.value = "0.50"; el.p1_range.value = 500;
+        el.p2_num.value = "0.60"; el.p2_range.value = probToRange(0.6);
 
         function updateFromRange(type) {
             el[type + '_num'].value = rangeToProb(el[type + '_range'].value);
@@ -122,7 +165,9 @@
 
         function updateFromNum(type) {
             let val = parseFloat(el[type + '_num'].value);
-            if(val > 0.9999) val = 0.9999;
+            if(isNaN(val)) return;
+            val = Math.max(0.0001, Math.min(0.9999, val));
+            el[type + '_num'].value = formatProb(val); // 即使手动输入也强制执行精度规则
             el[type + '_range'].value = probToRange(val);
             calculate();
         }
@@ -138,7 +183,7 @@
 
             if (p2 <= p1) {
                 resFields[0].innerText = "0.00%"; resFields[1].innerText = "0"; resFields[2].innerText = "$0.00";
-                msg.innerText = "● 评估概率 p2 必须大于市场价格 p1";
+                msg.innerText = "● 评估概率 p2 必须高于市场价格 p1";
                 msg.classList.remove('hidden');
                 return;
             }
