@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kelly Calculator - Professional Edition</title>
+    <title>Kelly Pro - Minimalist Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* 这里的 CSS 用于实现 Tailwind 较难直接做到的毛玻璃极致效果 */
         body {
             background: radial-gradient(circle at top left, #1e293b, #0f172a);
             min-height: 100vh;
@@ -21,16 +20,24 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
             color: white;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            /* 去掉 Chrome, Safari, Edge, Opera 的上下箭头 */
+            appearance: none;
+            -moz-appearance: textfield; /* Firefox */
+        }
+        /* 针对 Webkit 浏览器进一步清理箭头 */
+        .input-glass::-webkit-outer-spin-button,
+        .input-glass::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
         }
         .input-glass:focus {
             border-color: #6366f1;
             box-shadow: 0 0 15px rgba(99, 102, 241, 0.3);
             transform: translateY(-1px);
         }
-        /* 数字跳动动画效果预览 */
         @keyframes value-pop {
             0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
+            50% { transform: scale(1.02); }
             100% { transform: scale(1); }
         }
         .updated { animation: value-pop 0.2s ease-out; }
@@ -53,32 +60,32 @@
                 </div>
             </div>
             <div class="text-right">
-                <span class="text-[10px] px-2 py-1 rounded-full border border-slate-700 text-slate-400">Real-time Engine</span>
+                <span class="text-[10px] px-2 py-1 rounded-full border border-slate-700 text-slate-400">Pure Input</span>
             </div>
         </div>
         
         <div class="space-y-6 mb-10">
             <div class="grid grid-cols-1 gap-5">
-                <div class="group">
+                <div>
                     <label class="block text-xs font-semibold text-slate-500 mb-2 ml-1 uppercase">Total Capital (M)</label>
                     <input type="number" id="M" value="10000" class="input-glass w-full px-5 py-3 rounded-2xl outline-none text-lg font-medium">
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-semibold text-slate-500 mb-2 ml-1 uppercase">Market p1</label>
-                        <input type="number" id="p1" value="0.98" step="0.01" class="input-glass w-full px-5 py-3 rounded-2xl outline-none text-lg font-medium">
+                        <input type="number" id="p1" value="0.5" step="0.01" class="input-glass w-full px-5 py-3 rounded-2xl outline-none text-lg font-medium">
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-500 mb-2 ml-1 uppercase">Edge p2</label>
-                        <input type="number" id="p2" value="0.9999" step="0.0001" class="input-glass w-full px-5 py-3 rounded-2xl outline-none text-lg font-medium text-indigo-300">
+                        <label class="block text-xs font-semibold text-slate-500 mb-2 ml-1 uppercase text-indigo-400">Edge p2</label>
+                        <input type="number" id="p2" value="0.6" step="0.01" class="input-glass w-full px-5 py-3 rounded-2xl outline-none text-lg font-medium">
                     </div>
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 mb-2 ml-1 uppercase flex justify-between">
                         <span>Kelly Fraction (k)</span>
-                        <span id="k-val" class="text-indigo-400">0.5</span>
+                        <span id="k-val" class="text-indigo-400 font-bold">1.0</span>
                     </label>
-                    <input type="range" id="k" min="0" max="1" step="0.1" value="0.5" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500">
+                    <input type="range" id="k" min="0" max="1" step="0.1" value="1.0" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500">
                 </div>
             </div>
         </div>
@@ -95,7 +102,7 @@
             <div class="h-px bg-gradient-to-r from-transparent via-slate-800 to-transparent my-2"></div>
             <div class="flex justify-between items-center">
                 <span class="text-sm font-medium text-slate-500">Total Investment</span>
-                <span id="res-cost" class="text-3xl font-black text-emerald-400 tabular-nums shadow-emerald-500/10 drop-shadow-md">--</span>
+                <span id="res-cost" class="text-3xl font-black text-emerald-400 tabular-nums drop-shadow-[0_0_10px_rgba(52,211,153,0.2)]">--</span>
             </div>
         </div>
         
@@ -114,7 +121,6 @@
             kValLabel.innerText = k.toFixed(1);
             
             msg.classList.add('hidden');
-
             const results = [document.getElementById('res-percent'), document.getElementById('res-shares'), document.getElementById('res-cost')];
             results.forEach(r => { r.classList.remove('updated'); void r.offsetWidth; r.classList.add('updated'); });
 
