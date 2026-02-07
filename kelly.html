@@ -3,19 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>凯利计算器 - 紧凑精密版</title>
+    <title>凯利计算器 - 极致紧凑版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background-color: #f1f5f9; font-family: system-ui, -apple-system, sans-serif; letter-spacing: -0.01em; }
         .soft-card { background: white; box-shadow: 0 30px 60px -12px rgba(0,0,0,0.12); }
-        .input-field { border: 1px solid #e2e8f0; appearance: none; -moz-appearance: textfield; transition: all 0.2s; }
-        .input-field:focus { border-color: #6366f1; box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1); outline: none; }
         
         /* 滑动条美化 */
-        input[type=range] { height: 5px; -webkit-appearance: none; background: #e2e8f0; border-radius: 10px; }
-        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 18px; width: 18px; border-radius: 50%; background: #6366f1; cursor: pointer; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.15); }
+        input[type=range] { height: 4px; -webkit-appearance: none; background: #e2e8f0; border-radius: 10px; cursor: pointer; }
+        input[type=range]::-webkit-slider-thumb { 
+            -webkit-appearance: none; height: 18px; width: 18px; border-radius: 50%; 
+            background: #6366f1; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.15); 
+        }
         
-        .axis-label { font-size: 10px; color: #94a3b8; font-weight: 700; position: absolute; transform: translateX(-50%); top: 14px; }
+        .axis-label { font-size: 10px; color: #cbd5e1; font-weight: 700; position: absolute; transform: translateX(-50%); top: 12px; }
         
         @keyframes value-pop { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
         .updated { animation: value-pop 0.2s ease-out; }
@@ -24,104 +25,86 @@
 <body class="flex items-center justify-center min-h-screen p-4">
 
     <div class="soft-card rounded-[2rem] w-full max-w-md overflow-hidden">
-        <div class="p-6 pb-4 border-b border-slate-50">
-            <div class="flex justify-between items-start mb-6">
-                <div class="flex items-center space-x-3">
-                    <div class="h-10 w-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-black shadow-lg shadow-indigo-200">K</div>
-                    <div>
-                        <h2 class="text-lg font-extrabold text-slate-800 leading-none">凯利精密版</h2>
-                        <span id="precision-tag" class="text-[9px] font-bold text-indigo-500 uppercase tracking-tighter">常规模式 (2D)</span>
-                    </div>
+        <div class="p-6 pb-2 border-b border-slate-50">
+            <div class="flex justify-between items-center mb-6">
+                <div class="flex items-center space-x-2">
+                    <div class="h-8 w-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-black shadow-md shadow-indigo-100">K</div>
+                    <h2 class="text-base font-extrabold text-slate-800 uppercase tracking-tight">Kelly Precision</h2>
                 </div>
-                <div class="text-right">
-                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">总本金 (M)</label>
-                    <input type="number" id="M" value="10000" class="w-28 bg-slate-50 px-3 py-1 rounded-lg text-right font-bold text-slate-700 outline-none border border-transparent focus:border-indigo-200">
+                <div class="flex flex-col items-end">
+                    <label class="text-[9px] font-bold text-slate-400 uppercase mb-0.5">Total Capital (M)</label>
+                    <input type="number" id="M" value="10000" class="w-24 bg-slate-50 px-2 py-0.5 rounded-md text-right font-bold text-slate-700 outline-none border border-transparent focus:border-indigo-200">
                 </div>
             </div>
 
-            <div class="mb-6">
-                <div class="flex justify-between items-baseline mb-2">
-                    <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">市场价格 (P1)</span>
+            <div class="mb-5">
+                <div class="flex justify-between items-end">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase">Market Price (P1)</span>
                     <input type="number" id="p1_num" step="0.0001" class="w-32 text-right font-mono font-black text-2xl text-slate-800 outline-none bg-transparent">
                 </div>
-                <div class="relative px-1 pb-4">
+                <div class="relative px-1 pb-4 mt-1">
                     <input type="range" id="p1_range" min="0" max="1000" value="500" class="w-full">
-                    <div class="flex justify-between mt-1">
-                        <span class="axis-label" style="left: 0%">0.0001</span>
-                        <span class="axis-label" style="left: 50%">0.50</span>
-                        <span class="axis-label" style="left: 100%">0.9999</span>
-                    </div>
+                    <span class="axis-label" style="left: 0%">0.001</span>
+                    <div class="absolute left-1/2 -top-1 w-px h-2 bg-slate-200" style="transform: translateX(-50%)"></div>
+                    <span class="axis-label" style="left: 100%">0.999</span>
                 </div>
             </div>
 
-            <div class="mb-6">
-                <div class="flex justify-between items-baseline mb-2">
-                    <span class="text-[11px] font-bold text-indigo-400 uppercase tracking-wider text-indigo-500/70">评估概率 (P2)</span>
+            <div class="mb-5">
+                <div class="flex justify-between items-end">
+                    <span class="text-[10px] font-bold text-indigo-400 uppercase">Edge Probability (P2)</span>
                     <input type="number" id="p2_num" step="0.0001" class="w-32 text-right font-mono font-black text-2xl text-indigo-600 outline-none bg-transparent">
                 </div>
-                <div class="relative px-1 pb-4">
+                <div class="relative px-1 pb-4 mt-1">
                     <input type="range" id="p2_range" min="0" max="1000" value="600" class="w-full">
-                    <div class="flex justify-between mt-1">
-                        <span class="axis-label" style="left: 0%">0.0001</span>
-                        <span class="axis-label" style="left: 50%">0.50</span>
-                        <span class="axis-label" style="left: 100%">0.9999</span>
-                    </div>
+                    <span class="axis-label" style="left: 0%">0.001</span>
+                    <div class="absolute left-1/2 -top-1 w-px h-2 bg-slate-200" style="transform: translateX(-50%)"></div>
+                    <span class="axis-label" style="left: 100%">0.999</span>
                 </div>
             </div>
 
-            <div class="flex items-center space-x-4 pt-2">
-                <span class="text-[11px] font-bold text-slate-400 uppercase whitespace-nowrap">执行率 (K)</span>
+            <div class="flex items-center space-x-3 pt-1 pb-2">
+                <span class="text-[10px] font-bold text-slate-400 uppercase">Fraction (K)</span>
                 <input type="range" id="k" min="0" max="1" step="0.1" value="1.0" class="flex-grow">
-                <span id="k-val" class="text-sm font-black text-indigo-600 font-mono w-8 text-right">1.0</span>
+                <span id="k-val" class="text-sm font-black text-indigo-600 font-mono w-6 text-right">1.0</span>
             </div>
         </div>
 
-        <div class="bg-slate-900 p-6 space-y-3 relative">
-            <div class="absolute inset-0 opacity-10 pointer-events-none" style="background-image: radial-gradient(#6366f1 1px, transparent 0); background-size: 20px 20px;"></div>
+        <div class="bg-slate-900 p-5 space-y-3 relative">
+            <div class="absolute inset-0 opacity-10 pointer-events-none" style="background-image: radial-gradient(#6366f1 1px, transparent 0); background-size: 16px 16px;"></div>
             
-            <div class="relative z-10 grid grid-cols-2 gap-4">
-                <div class="bg-white/5 p-4 rounded-2xl border border-white/5">
-                    <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">目标持仓</p>
-                    <p id="res-percent" class="text-2xl font-black text-indigo-400 tabular-nums">--</p>
+            <div class="relative z-10 grid grid-cols-2 gap-3">
+                <div class="bg-white/5 p-3 rounded-xl border border-white/5">
+                    <p class="text-[9px] font-bold text-slate-500 uppercase mb-0.5">Target Weight</p>
+                    <p id="res-percent" class="text-xl font-black text-indigo-400">--</p>
                 </div>
-                <div class="bg-white/5 p-4 rounded-2xl border border-white/5">
-                    <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">建议头寸</p>
-                    <p id="res-shares" class="text-2xl font-black text-slate-100 tabular-nums">--</p>
+                <div class="bg-white/5 p-3 rounded-xl border border-white/5">
+                    <p class="text-[9px] font-bold text-slate-500 uppercase mb-0.5">Units Required</p>
+                    <p id="res-shares" class="text-xl font-black text-slate-100">--</p>
                 </div>
             </div>
             
-            <div class="relative z-10 bg-indigo-500/10 p-5 rounded-2xl border border-indigo-500/20 flex justify-between items-center">
+            <div class="relative z-10 bg-indigo-500/10 p-4 rounded-xl border border-indigo-500/20 flex justify-between items-center">
                 <div>
-                    <p class="text-[9px] font-bold text-indigo-300 uppercase tracking-[0.2em]">当前投入成本</p>
-                    <p id="res-cost" class="text-3xl font-black text-emerald-400 tabular-nums">$0.00</p>
+                    <p class="text-[9px] font-bold text-indigo-300 uppercase mb-0.5">Current Cost</p>
+                    <p id="res-cost" class="text-2xl font-black text-emerald-400">$0.00</p>
                 </div>
-                <div class="h-10 w-10 rounded-full border-2 border-emerald-500/20 flex items-center justify-center">
+                <div class="h-8 w-8 rounded-full bg-emerald-500/10 flex items-center justify-center">
                     <div class="h-2 w-2 bg-emerald-500 rounded-full animate-pulse"></div>
                 </div>
             </div>
         </div>
-        
-        <p id="msg" class="absolute bottom-2 left-0 right-0 text-center text-[9px] font-bold text-amber-500 uppercase pointer-events-none"></p>
     </div>
 
     <script>
         function formatProb(prob) {
             const p = parseFloat(prob);
-            const tag = document.getElementById('precision-tag');
-            if (p < 0.01 || p > 0.99) {
-                tag.innerText = "精密模式 (4D)";
-                tag.className = "text-[9px] font-bold text-indigo-500 uppercase tracking-tighter bg-indigo-50 px-1 rounded";
-                return p.toFixed(4);
-            } else {
-                tag.innerText = "常规模式 (2D)";
-                tag.className = "text-[9px] font-bold text-slate-400 uppercase tracking-tighter";
-                return p.toFixed(2);
-            }
+            return (p < 0.01 || p > 0.99) ? p.toFixed(4) : p.toFixed(2);
         }
 
         function rangeToProb(val) {
             let v = val / 1000;
-            if (val > 490 && val < 510) return "0.50";
+            if (val > 492 && val < 508) return "0.50";
             let prob = v <= 0.5 ? 0.5 * Math.pow(v/0.5, 3.5) : 0.5 + 0.5 * (1 - Math.pow(1 - (v-0.5)/0.5, 3.5));
             return formatProb(Math.max(0.0001, Math.min(0.9999, prob)));
         }
@@ -138,22 +121,16 @@
         function calculate() {
             const M = parseFloat(el.M.value), p1 = parseFloat(el.p1_num.value), p2 = parseFloat(el.p2_num.value), k = parseFloat(el.k.value);
             document.getElementById('k-val').innerText = k.toFixed(1);
-            const msg = document.getElementById('msg');
-            msg.innerText = "";
-
-            const resFields = ['res-percent', 'res-shares', 'res-cost'].map(id => document.getElementById(id));
+            const resFields = [document.getElementById('res-percent'), document.getElementById('res-shares'), document.getElementById('res-cost')];
             resFields.forEach(r => { r.classList.remove('updated'); void r.offsetWidth; r.classList.add('updated'); });
 
             if (p2 <= p1) {
                 resFields[0].innerText = "0.00%"; resFields[1].innerText = "0"; resFields[2].innerText = "$0.00";
-                msg.innerText = "P2 必须大于 P1";
                 return;
             }
-
             const f_star = (p2 - p1) / (1 - p1);
             const target_f = f_star * k;
             const N = (M * target_f) / p1;
-
             resFields[0].innerText = (target_f * 100).toFixed(2) + "%";
             resFields[1].innerText = Math.floor(N).toLocaleString();
             resFields[2].innerText = "$" + (Math.floor(N) * p1).toLocaleString(undefined, {minimumFractionDigits: 2});
@@ -163,10 +140,7 @@
         el.p2_range.oninput = () => { el.p2_num.value = rangeToProb(el.p2_range.value); calculate(); };
         el.p1_num.onchange = () => { let v = Math.max(0.0001, Math.min(0.9999, parseFloat(el.p1_num.value))); el.p1_num.value = formatProb(v); el.p1_range.value = probToRange(v); calculate(); };
         el.p2_num.onchange = () => { let v = Math.max(0.0001, Math.min(0.9999, parseFloat(el.p2_num.value))); el.p2_num.value = formatProb(v); el.p2_range.value = probToRange(v); calculate(); };
-        el.M.oninput = calculate;
-        el.k.oninput = calculate;
-
-        // 初始化
+        el.M.oninput = calculate; el.k.oninput = calculate;
         el.p1_num.value = "0.50"; el.p2_num.value = "0.60"; calculate();
     </script>
 </body>
